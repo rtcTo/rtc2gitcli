@@ -2,7 +2,8 @@
 rtc2git written as scm cli plugin
 
 # rtc2gitcli
-A tool made for migrating code from an existing [RTC] (https://jazz.net/products/rational-team-concert/) SCM repository into a Git repository
+A tool made for migrating code from an existing [RTC] (https://jazz.net/products/rational-team-concert/) SCM repository into a Git repository.
+Inspired by [rtc2git](https://github.com/rtcTo/rtc2git), but written in Java and hopefully faster.
 It is implemented as scm cli plugin.
 
 ## Prerequirements
