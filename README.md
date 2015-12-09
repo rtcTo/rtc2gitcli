@@ -12,7 +12,7 @@ It is implemented as scm cli plugin.
 
 ## Usage
 - create an RTC workspace with flow target and components as wanted --> SOURCE_WORKSPACE_NAME
-- create an RTC workspace with SOURCE_WORKPSACE as flow target --> DESTINTION_WORKSPACE_NAME
+- create an RTC workspace with SOURCE_WORKPSACE_NAME as flow target --> DESTINTION_WORKSPACE_NAME
 - open shell or cmd
 - step into the target directory
 - scm load -r <uri> -u <username> -P password DESTINATION_WORKSPACE_NAME
