@@ -1,5 +1,5 @@
 
-package to.rtc.cli.migrate.git;
+package to.rtc.cli.migrate;
 
 import com.ibm.team.filesystem.cli.core.util.SubcommandUtil;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.IOptionSource;
@@ -9,7 +9,7 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.PositionalOptionDefinition;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
 
-public class MigrateToGitOptions implements IOptionSource {
+public class MigrateToOptions implements IOptionSource {
   public static final IOptionKey OPT_SRC_WS = new OptionKey("source-workspace-name"); //$NON-NLS-1$
   public static final IOptionKey OPT_DEST_WS = new OptionKey("destination-workspace-name"); //$NON-NLS-1$
 

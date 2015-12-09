@@ -7,6 +7,9 @@ package to.rtc.cli.migrate.git;
 import java.util.Iterator;
 import java.util.List;
 
+import to.rtc.cli.migrate.command.AcceptCommandDelegate;
+import to.rtc.cli.migrate.command.LoadCommandDelegate;
+
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogBaselineEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogChangeSetEntryDTO;

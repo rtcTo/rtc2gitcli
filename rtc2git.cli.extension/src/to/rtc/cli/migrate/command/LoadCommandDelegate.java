@@ -1,5 +1,5 @@
 
-package to.rtc.cli.migrate.git;
+package to.rtc.cli.migrate.command;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;

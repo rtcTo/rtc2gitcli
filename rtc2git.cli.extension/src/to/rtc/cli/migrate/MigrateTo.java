@@ -2,13 +2,15 @@
  *
  */
 
-package to.rtc.cli.migrate.git;
+package to.rtc.cli.migrate;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+
+import to.rtc.cli.migrate.git.ChangeLogEntryVisitor;
 
 import com.ibm.team.filesystem.cli.client.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.internal.ScmCommandLineArgument;
@@ -40,7 +42,7 @@ import com.ibm.team.scm.common.IWorkspace;
  *
  */
 @SuppressWarnings("restriction")
-public class MigrateToGit extends AbstractSubcommand implements ISubcommand {
+public class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
   /**
    * @return
@@ -56,11 +58,11 @@ public class MigrateToGit extends AbstractSubcommand implements ISubcommand {
     // Consume the command-line
     ICommandLine subargs = config.getSubcommandCommandLine();
 
-    final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(subargs.getOptionValue(MigrateToGitOptions.OPT_SRC_WS),
+    final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS),
         config);
     SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
     final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-        subargs.getOptionValue(MigrateToGitOptions.OPT_DEST_WS), config);
+        subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
     SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
     // Initialize connection to RTC
