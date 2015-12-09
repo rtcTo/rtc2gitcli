@@ -5,10 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ibm.team.filesystem.cli.client.internal.subcommands.LoadCmdLauncher;
+import com.ibm.team.filesystem.cli.client.internal.subcommands.LoadCmdOptions;
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
 
 @SuppressWarnings("restriction")
 public class LoadCommandDelegate extends RtcCommandDelegate {
@@ -21,6 +24,11 @@ public class LoadCommandDelegate extends RtcCommandDelegate {
   @Override
   AbstractSubcommand getCommand() {
     return new LoadCmdLauncher();
+  }
+
+  @Override
+  Options getOptions() throws ConflictingOptionException {
+    return new LoadCmdOptions().getOptions();
   }
 
   private void setSubCommandLineByReflection(IScmClientConfiguration config, String workspace, boolean force) {

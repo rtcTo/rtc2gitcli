@@ -56,7 +56,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
         new LoadCommandDelegate(config, workspace, true).run();
         initialLoadDone = true;
       } catch (CLIClientException e) {
-        throw new RuntimeException("Not a valid sandbox. Please run [scm load] before [scm migrate-to-git] command");
+        throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace + "] before [scm migrate-to-git] command");
       }
     }
   }
