@@ -4,11 +4,15 @@ package to.rtc.cli.migrate.command;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.runtime.IStatus;
+
 import com.ibm.team.filesystem.cli.client.internal.subcommands.AcceptCmd;
 import com.ibm.team.filesystem.cli.client.internal.subcommands.AcceptCmdOptions;
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
+import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
+import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
@@ -19,6 +23,20 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
   public AcceptCommandDelegate(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline) {
     super(config, "accept " + targetWorkspace + " " + changeSetUuid + " baseline[" + baseline + "]");
     setSubCommandLine(targetWorkspace, changeSetUuid, baseline);
+  }
+
+  @Override
+  public int run() throws CLIClientException {
+    try {
+      return super.run();
+    } catch (CLIClientException e) {
+      IStatus status = e.getStatus();
+      if (status != null && Constants.STATUS_CONFLICT == status.getCode()) {
+        getStdOut().println("There was a conflict. We ignore that, because the following accepts should fix that");
+        return -1;
+      }
+      throw e;
+    }
   }
 
   @Override

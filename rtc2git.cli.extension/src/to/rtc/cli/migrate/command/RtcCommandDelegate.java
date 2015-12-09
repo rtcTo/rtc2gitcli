@@ -1,6 +1,7 @@
 
 package to.rtc.cli.migrate.command;
 
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.List;
 
@@ -25,7 +26,7 @@ public abstract class RtcCommandDelegate {
     this.commandLine = commandLine;
   }
 
-  public final int run() throws CLIClientException {
+  public int run() throws CLIClientException {
     long start = System.currentTimeMillis();
     AbstractSubcommand command = getCommand();
     try {
@@ -70,6 +71,10 @@ public abstract class RtcCommandDelegate {
       return super.toString();
     }
     return commandLine;
+  }
+
+  protected PrintStream getStdOut() {
+    return config.getContext().stdout();
   }
 
 }

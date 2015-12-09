@@ -91,7 +91,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
           .setCreationDate(dto.getCreationDate());
       migrator.commitChanges(changeSet);
     } catch (CLIClientException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
