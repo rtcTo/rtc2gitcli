@@ -4,49 +4,33 @@
 
 package to.rtc.cli.migrate.command;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.ibm.team.filesystem.cli.client.internal.subcommands.AcceptCmd;
+import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
-import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
-import com.ibm.team.rtc.cli.infrastructure.internal.core.ClientConfiguration;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 
 @SuppressWarnings("restriction")
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
-  public void runAcceptChangeSet(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid) throws CLIClientException {
-    runAcceptChangeSet(config, targetWorkspace, changeSetUuid, false);
+  public AcceptCommandDelegate(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline) {
+    super(config);
+    setSubCommandLine(targetWorkspace, changeSetUuid, baseline);
   }
 
-  public void runAcceptBaseline(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid) throws CLIClientException {
-    runAcceptChangeSet(config, targetWorkspace, changeSetUuid, true);
+  @Override
+  AbstractSubcommand getCommand() {
+    return new AcceptCmd();
   }
 
-  void runAcceptChangeSet(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline)
-      throws CLIClientException {
-    setSubCommandLine(config, targetWorkspace, changeSetUuid, baseline);
-    System.out.println("Accepting changeset [" + changeSetUuid + "] to workspace [" + targetWorkspace + "]");
-    long start = System.currentTimeMillis();
-    new AcceptCmd().run(config);
-    System.out.println("Accpeted. Accept took [" + (System.currentTimeMillis() - start) + " ms]");
-  }
-
-  void setSubCommandLine(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean isBaseline) {
-    Class<?> c = ClientConfiguration.class;
-    try {
-      Field subargs = c.getDeclaredField("subargs");
-      subargs.setAccessible(true);
-      String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
-      String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
-      String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
-      subargs.set(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline));
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  void setSubCommandLine(String targetWorkspace, String changeSetUuid, boolean isBaseline) {
+    String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
+    String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
+    String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
+    setSubCommandLine(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline));
   }
 
   private ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace, String changeSetUuid,
@@ -71,4 +55,5 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
     args.add(changeSetUuid);
     return generateCommandLine(args);
   }
+
 }

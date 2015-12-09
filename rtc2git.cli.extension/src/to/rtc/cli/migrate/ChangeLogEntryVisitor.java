@@ -34,16 +34,14 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private String workspace;
   private boolean initialLoadDone = false;
   private final Migrator migrator;
-  private final AcceptCommandDelegate acceptCommand;
-  private final LoadCommandDelegate loadCommand;
 
   private void acceptAndLoadBaseline(IScmClientConfiguration config2, String workspace2, String baselineItemId) throws CLIClientException {
-    acceptCommand.runAcceptBaseline(config, workspace, baselineItemId);
+    new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
     handleInitialLoad();
   }
 
   private void acceptAndLoadChangeset(IScmClientConfiguration config2, String workspace2, String changeSetUuid) throws CLIClientException {
-    acceptCommand.runAcceptChangeSet(config, workspace, changeSetUuid);
+    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
     handleInitialLoad();
   }
 
@@ -55,7 +53,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private void handleInitialLoad() {
     if (!initialLoadDone) {
       try {
-        loadCommand.runLoad(config, workspace, true);
+        new LoadCommandDelegate(config, workspace, true).run();
         initialLoadDone = true;
       } catch (CLIClientException e) {
         throw new RuntimeException("Not a valid sandbox. Please run [scm load] before [scm migrate-to-git] command");
@@ -67,13 +65,13 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     this.config = config;
     this.workspace = workspace;
     this.migrator = migrator;
-    this.acceptCommand = new AcceptCommandDelegate();
-    this.loadCommand = new LoadCommandDelegate();
     setOutput(out);
   }
 
   public void acceptInto(ChangeLogEntryDTO root) {
-    if (!enter(root)) return;
+    if (!enter(root)) {
+      return;
+    }
     for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator.hasNext();) {
       ChangeLogEntryDTO child = (ChangeLogEntryDTO)iterator.next();
       visitChild(root, child);
