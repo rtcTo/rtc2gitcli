@@ -31,7 +31,7 @@ public abstract class RtcCommandDelegate {
     try {
       return command.run(config);
     } finally {
-      System.out.println("DelegateCommand [" + this + "] finished in [" + (System.currentTimeMillis() - start) + "]ms");
+      config.getContext().stdout().println("DelegateCommand [" + this + "] finished in [" + (System.currentTimeMillis() - start) + "]ms");
     }
   }
 

@@ -1,6 +1,3 @@
-/**
- *
- */
 
 package to.rtc.cli.migrate.command;
 

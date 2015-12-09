@@ -1,6 +1,3 @@
-/**
- *
- */
 
 package to.rtc.cli.migrate;
 
@@ -23,26 +20,21 @@ import com.ibm.team.filesystem.rcp.core.internal.changelog.BaseChangeLogEntryVis
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 
-/**
- * @author florian.buehlmann
- *
- */
 public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
+  private static final String CLENTRY_BASELINE_NAME = "clentry_baseline";
   private ChangeLogEntryDTO oldBaseline;
   private IScmClientConfiguration config;
   private String workspace;
-  private boolean initialLoadDone = false;
+  private boolean initialLoadDone;
   private final Migrator migrator;
 
-  private void acceptAndLoadBaseline(String baselineItemId) throws CLIClientException {
-    new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
-    handleInitialLoad();
-  }
-
-  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
-    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
-    handleInitialLoad();
+  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator) {
+    initialLoadDone = false;
+    this.config = config;
+    this.workspace = workspace;
+    this.migrator = migrator;
+    setOutput(out);
   }
 
   public void init() {
@@ -55,20 +47,13 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
       try {
         new LoadCommandDelegate(config, workspace, true).run();
         initialLoadDone = true;
-      } catch (CLIClientException e) {
+      } catch (CLIClientException e) {// ignore
         throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace + "] before [scm migrate-to-git] command");
       }
     }
   }
 
-  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator) {
-    this.config = config;
-    this.workspace = workspace;
-    this.migrator = migrator;
-    setOutput(out);
-  }
-
-  public void acceptInto(ChangeLogEntryDTO root) {
+  void acceptInto(ChangeLogEntryDTO root) {
     if (!enter(root)) {
       return;
     }
@@ -93,8 +78,12 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
       }
     }
     final String changeSetUuid = dto.getItemId();
-    System.out.println(handleBaselineChange(parent) + " [" + changeSetUuid + "], Story [" + workItemText + "] Comment ["
-        + dto.getEntryName() + "] User [" + dto.getCreator().getFullName() + "]");
+    config
+        .getContext()
+        .stdout()
+        .println(
+            handleBaselineChange(parent) + " [" + changeSetUuid + "], Story [" + workItemText + "] Comment [" + dto.getEntryName()
+                + "] User [" + dto.getCreator().getFullName() + "]");
     try {
       acceptAndLoadChangeSet(changeSetUuid);
       ChangeSet changeSet = new ChangeSet(changeSetUuid).setWorkItem(workItemText).setText(dto.getEntryName())
@@ -106,9 +95,14 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     }
   }
 
+  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
+    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
+    handleInitialLoad();
+  }
+
   private String handleBaselineChange(ChangeLogEntryDTO parent) {
     if (oldBaseline != null && !parent.getItemId().equals(oldBaseline.getItemId())) {
-      if ("clentry_baseline".equals(oldBaseline.getEntryType())) {
+      if (CLENTRY_BASELINE_NAME.equals(oldBaseline.getEntryType())) {
         ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)oldBaseline;
         // Accept baseline to target workspace
         try {
@@ -123,13 +117,18 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
       oldBaseline = parent;
     }
 
-    if ("clentry_baseline".equals(parent.getEntryType())) {
+    if (CLENTRY_BASELINE_NAME.equals(parent.getEntryType())) {
       ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)parent;
       oldBaseline = baseline;
       return baseline.getBaselineId() + ":" + baseline.getEntryName() + " --> ";
     } else {
       return " NO BASELINE --> ";
     }
+  }
+
+  private void acceptAndLoadBaseline(String baselineItemId) throws CLIClientException {
+    new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
+    handleInitialLoad();
   }
 
   @Override

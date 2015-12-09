@@ -1,6 +1,3 @@
-/**
- *
- */
 
 package to.rtc.cli.migrate;
 
@@ -35,16 +32,8 @@ import com.ibm.team.rtc.cli.infrastructure.internal.core.ISubcommand;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.scm.common.IWorkspace;
 
-/**
- * @author florian.buehlmann
- *
- */
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
-
-  /**
-   * @return
-   */
   private IProgressMonitor getMonitor() {
     return new NullProgressMonitor();
   }
@@ -103,6 +92,6 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
     } catch (TeamRepositoryException e) {
       e.printStackTrace();
     }
-    System.out.println("Migration took [" + (System.currentTimeMillis() - start) + " ms]");
+    config.getContext().stdout().println("Migration took [" + (System.currentTimeMillis() - start) + " ms]");
   }
 }
