@@ -50,14 +50,6 @@ public class AcceptCommandDelegate {
       String uri = subCommandLine.getOption(CommonOptions.OPT_URI);
       String username = subCommandLine.getOption(CommonOptions.OPT_USERNAME);
       String password = subCommandLine.getOption(CommonOptions.OPT_PASSWORD);
-      // System.out.println("-->" + uri);
-      // System.out.println("-->" + username);
-      // System.out.println("-->" + password);
-      // System.out.println("-->" + targetWorkspace + " => " + targetDirectory);
-      // System.out.println("-->" + changeSetUuid);
-      // here I was stuck
-      // String rtcWorkspace = subCommandLine.getOption(new NamedOptionDefinition("t", "target",
-      // 1));
       subargs.set(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline));
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -67,7 +59,6 @@ public class AcceptCommandDelegate {
   private static ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace, String changeSetUuid,
       boolean isBaseline) {
     List<String> args = new ArrayList<String>();
-    // args.add("-v");
     args.add("-o");
     args.add("--no-merge");
     args.add("-r");

@@ -10,8 +10,6 @@ import java.util.List;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
-import to.rtc.cli.migrate.git.ChangeLogEntryVisitor;
-
 import com.ibm.team.filesystem.cli.client.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.internal.ScmCommandLineArgument;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil;
@@ -42,7 +40,7 @@ import com.ibm.team.scm.common.IWorkspace;
  *
  */
 @SuppressWarnings("restriction")
-public class MigrateTo extends AbstractSubcommand implements ISubcommand {
+public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
   /**
    * @return
@@ -51,6 +49,8 @@ public class MigrateTo extends AbstractSubcommand implements ISubcommand {
     return new NullProgressMonitor();
   }
 
+  public abstract Migrator getMigrator();
+
   @Override
   public void run() throws FileSystemException {
     long start = System.currentTimeMillis();
@@ -58,11 +58,11 @@ public class MigrateTo extends AbstractSubcommand implements ISubcommand {
     // Consume the command-line
     ICommandLine subargs = config.getSubcommandCommandLine();
 
-    final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS),
-        config);
+    final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
+        .create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
     SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-    final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-        subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+    final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS),
+        config);
     SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
     // Initialize connection to RTC
@@ -96,7 +96,7 @@ public class MigrateTo extends AbstractSubcommand implements ISubcommand {
       changelog = clOp.run(getMonitor());
 
       ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
-          destinationWs.getName());
+          destinationWs.getName(), getMigrator());
 
       visitor.init();
       visitor.acceptInto(changelog);

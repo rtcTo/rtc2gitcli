@@ -4,8 +4,8 @@
    <extension
          point="com.ibm.team.rtc.cli.infrastructure.subcommand">
       <subcommand
-            class="to.rtc.cli.migrate.MigrateTo"
-            id="to.rtc.cli.migrate.MigrateTo"
+            class="to.rtc.cli.migrate.git.MigrateToGit"
+            id="to.rtc.cli.migrate.git.MigrateToGit"
             initpolicy="uri/argument/ancestor"
             name="migrate-to-git"
             options="to.rtc.cli.migrate.MigrateToOptions"

@@ -2,7 +2,7 @@
  *
  */
 
-package to.rtc.cli.migrate.git;
+package to.rtc.cli.migrate;
 
 import java.util.Iterator;
 import java.util.List;
@@ -33,14 +33,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private IScmClientConfiguration config;
   private String workspace;
   private boolean initialLoadDone = false;
-
-  private void createGitTag() {
-    // TODO Auto-generated method stub
-  }
-
-  private void commitGitChanges() {
-    // TODO Auto-generated method stub
-  }
+  private final Migrator migrator;
 
   private void acceptAndLoadBaseline(IScmClientConfiguration config2, String workspace2, String baselineItemId) throws CLIClientException {
     AcceptCommandDelegate.runAcceptBaseline(config, workspace, baselineItemId);
@@ -68,9 +61,11 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     }
   }
 
-  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace) {
+  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator) {
     this.config = config;
     this.workspace = workspace;
+    this.migrator = migrator;
+
     setOutput(out);
   }
 
@@ -101,7 +96,10 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
         + dto.getEntryName() + "] User [" + dto.getCreator().getFullName() + "]");
     try {
       acceptAndLoadChangeset(config, workspace, changeSetUuid);
-      commitGitChanges();
+      ChangeSet changeSet = new ChangeSet(changeSetUuid).setWorkItem(workItemText).setText(dto.getEntryName())
+          .setCreatorName(dto.getCreator().getFullName()).setCreatorEMail(dto.getCreator().getEmailAddress())
+          .setCreationDate(dto.getCreationDate());
+      migrator.commitChanges(changeSet);
     } catch (CLIClientException e) {
       e.printStackTrace();
     }
@@ -111,10 +109,10 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     if (oldBaseline != null && !parent.getItemId().equals(oldBaseline.getItemId())) {
       if ("clentry_baseline".equals(oldBaseline.getEntryType())) {
         ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)oldBaseline;
-        System.out.println("Baseline [" + baseline.getBaselineId() + ":" + baseline.getEntryName() + "] must be created!");
         // Accept baseline to target workspace
         try {
-          createGitTag();
+          Tag tag = new Tag(baseline.getItemId()).setName(baseline.getEntryName()).setCreationDate(baseline.getCreationDate());
+          migrator.createTag(tag);
           acceptAndLoadBaseline(config, workspace, baseline.getItemId());
         } catch (CLIClientException e) {
           // TODO Auto-generated catch block
