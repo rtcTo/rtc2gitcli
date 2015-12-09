@@ -35,12 +35,12 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private boolean initialLoadDone = false;
   private final Migrator migrator;
 
-  private void acceptAndLoadBaseline(IScmClientConfiguration config2, String workspace2, String baselineItemId) throws CLIClientException {
+  private void acceptAndLoadBaseline(String baselineItemId) throws CLIClientException {
     new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
     handleInitialLoad();
   }
 
-  private void acceptAndLoadChangeset(IScmClientConfiguration config2, String workspace2, String changeSetUuid) throws CLIClientException {
+  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
     new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
     handleInitialLoad();
   }
@@ -96,7 +96,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     System.out.println(handleBaselineChange(parent) + " [" + changeSetUuid + "], Story [" + workItemText + "] Comment ["
         + dto.getEntryName() + "] User [" + dto.getCreator().getFullName() + "]");
     try {
-      acceptAndLoadChangeset(config, workspace, changeSetUuid);
+      acceptAndLoadChangeSet(changeSetUuid);
       ChangeSet changeSet = new ChangeSet(changeSetUuid).setWorkItem(workItemText).setText(dto.getEntryName())
           .setCreatorName(dto.getCreator().getFullName()).setCreatorEMail(dto.getCreator().getEmailAddress())
           .setCreationDate(dto.getCreationDate());
@@ -114,7 +114,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
         try {
           Tag tag = new Tag(baseline.getItemId()).setName(baseline.getEntryName()).setCreationDate(baseline.getCreationDate());
           migrator.createTag(tag);
-          acceptAndLoadBaseline(config, workspace, baseline.getItemId());
+          acceptAndLoadBaseline(baseline.getItemId());
         } catch (CLIClientException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();

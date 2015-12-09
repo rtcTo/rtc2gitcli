@@ -17,7 +17,7 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 public class LoadCommandDelegate extends RtcCommandDelegate {
 
   public LoadCommandDelegate(IScmClientConfiguration config, String workspace, boolean force) {
-    super(config);
+    super(config, "load " + workspace + " force[" + force + "]");
     setSubCommandLineByReflection(config, workspace, force);
   }
 

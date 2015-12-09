@@ -18,8 +18,11 @@ public abstract class RtcCommandDelegate {
 
   protected final IScmClientConfiguration config;
 
-  protected RtcCommandDelegate(IScmClientConfiguration config) {
+  private final String commandLine;
+
+  protected RtcCommandDelegate(IScmClientConfiguration config, String commandLine) {
     this.config = config;
+    this.commandLine = commandLine;
   }
 
   public final int run() throws CLIClientException {
@@ -28,7 +31,7 @@ public abstract class RtcCommandDelegate {
     try {
       return command.run(config);
     } finally {
-      System.out.println("DelegateCommand [" + command + "] finished in [" + (System.currentTimeMillis() - start) + " ms]");
+      System.out.println("DelegateCommand [" + this + "] finished in [" + (System.currentTimeMillis() - start) + "]ms");
     }
   }
 
@@ -59,6 +62,14 @@ public abstract class RtcCommandDelegate {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Override
+  public String toString() {
+    if (commandLine == null) {
+      return super.toString();
+    }
+    return commandLine;
   }
 
 }

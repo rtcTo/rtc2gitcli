@@ -20,7 +20,7 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
   public AcceptCommandDelegate(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline) {
-    super(config);
+    super(config, "accept " + targetWorkspace + " " + changeSetUuid + " baseline[" + baseline + "]");
     setSubCommandLine(targetWorkspace, changeSetUuid, baseline);
   }
 
