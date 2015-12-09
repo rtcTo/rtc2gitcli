@@ -73,8 +73,12 @@ public abstract class RtcCommandDelegate {
     return commandLine;
   }
 
-  protected PrintStream getStdOut() {
+  protected final PrintStream stdout() {
     return config.getContext().stdout();
+  }
+
+  protected final PrintStream stderr() {
+    return config.getContext().stderr();
   }
 
 }

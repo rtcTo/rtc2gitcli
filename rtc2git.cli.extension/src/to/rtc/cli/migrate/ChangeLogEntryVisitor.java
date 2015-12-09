@@ -1,6 +1,7 @@
 
 package to.rtc.cli.migrate;
 
+import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
 
@@ -95,6 +96,10 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     }
   }
 
+  private PrintStream stdout() {
+    return config.getContext().stdout();
+  }
+
   private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
     new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
     handleInitialLoad();
@@ -110,7 +115,6 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
           migrator.createTag(tag);
           acceptAndLoadBaseline(baseline.getItemId());
         } catch (CLIClientException e) {
-          // TODO Auto-generated catch block
           e.printStackTrace();
         }
       }
@@ -137,6 +141,13 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
   @Override
   protected void visitComponent(ChangeLogEntryDTO parent, ChangeLogComponentEntryDTO dto) {
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("---------------------" + dto.getEntryName() + "----------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
   }
 
   @Override

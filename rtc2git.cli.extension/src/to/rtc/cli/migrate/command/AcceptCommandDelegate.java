@@ -31,9 +31,15 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
       return super.run();
     } catch (CLIClientException e) {
       IStatus status = e.getStatus();
-      if (status != null && Constants.STATUS_CONFLICT == status.getCode()) {
-        getStdOut().println("There was a conflict. We ignore that, because the following accepts should fix that");
-        return -1;
+      if (status != null) {
+        if (Constants.STATUS_CONFLICT == status.getCode() || //
+            Constants.STATUS_GAP == status.getCode() || //
+            Constants.STATUS_NWAY_CONFLICT == status.getCode()//
+        ) {
+          stdout().println("There was a conflict. We ignore that, because the following accepts should fix that");
+          return -1;
+        }
+        stderr().println("There was an unexpected exception with state [" + status.getCode() + "]");
       }
       throw e;
     }
