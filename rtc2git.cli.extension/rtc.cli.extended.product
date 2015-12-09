@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?pde version="3.5"?>
+
+<product name="SCM CLI" id="com.ibm.team.filesystem.cli.core.product" application="com.ibm.team.filesystem.cli.core.id1" useFeatures="false" includeLaunchers="true">
+
+   <configIni use="default" path="config.ini">
+   </configIni>
+
+   <launcherArgs>
+      <programArgs>--launcher.suppressErrors
+-data
+@noDefault</programArgs>
+      <vmArgs>-Xmx512m
+-Xshareclasses
+-Xquickstart
+-Dosgi.requiredJavaVersion=1.5</vmArgs>
+      <vmArgsMac>-XstartOnFirstThread -Dorg.eclipse.swt.internal.carbon.smallFonts</vmArgsMac>
+   </launcherArgs>
+
+   <windowImages/>
+
+   <launcher name="scm">
+      <solaris/>
+      <win useIco="false">
+         <bmp/>
+      </win>
+   </launcher>
+
+   <vm>
+   </vm>
+
+   <plugins>
+      <plugin id="com.ibm.icu"/>
+      <plugin id="com.ibm.team.apt.client"/>
+      <plugin id="com.ibm.team.apt.common"/>
+      <plugin id="com.ibm.team.feed.core"/>
+      <plugin id="com.ibm.team.filesystem.cli.client"/>
+      <plugin id="com.ibm.team.filesystem.cli.core"/>
+      <plugin id="com.ibm.team.filesystem.cli.process"/>
+      <plugin id="com.ibm.team.filesystem.cli.tools"/>
+      <plugin id="com.ibm.team.filesystem.client"/>
+      <plugin id="com.ibm.team.filesystem.common"/>
+      <plugin id="com.ibm.team.filesystem.rcp.core"/>
+      <plugin id="com.ibm.team.foundation.client"/>
+      <plugin id="com.ibm.team.foundation.common"/>
+      <plugin id="com.ibm.team.foundation.rcp.core"/>
+      <plugin id="com.ibm.team.fulltext.common"/>
+      <plugin id="com.ibm.team.process.client"/>
+      <plugin id="com.ibm.team.process.common"/>
+      <plugin id="com.ibm.team.repository.client"/>
+      <plugin id="com.ibm.team.repository.common"/>
+      <plugin id="com.ibm.team.repository.common.json"/>
+      <plugin id="com.ibm.team.repository.common.remoteaccess"/>
+      <plugin id="com.ibm.team.repository.common.remoteaccess.auth"/>
+      <plugin id="com.ibm.team.repository.common.serialize"/>
+      <plugin id="com.ibm.team.repository.common.transport"/>
+      <plugin id="com.ibm.team.repository.rcp.core"/>
+      <plugin id="com.ibm.team.scm.client"/>
+      <plugin id="com.ibm.team.scm.common"/>
+      <plugin id="com.ibm.team.workitem.client"/>
+      <plugin id="com.ibm.team.workitem.common"/>
+      <plugin id="com.ibm.team.workitem.rcp.core"/>
+      <plugin id="javax.servlet"/>
+      <plugin id="org.apache.commons.codec"/>
+      <plugin id="org.apache.commons.httpclient"/>
+      <plugin id="org.apache.commons.logging"/>
+      <plugin id="org.apache.log4j"/>
+      <plugin id="org.eclipse.ant.core"/>
+      <plugin id="org.eclipse.core.commands"/>
+      <plugin id="org.eclipse.core.contenttype"/>
+      <plugin id="org.eclipse.core.databinding"/>
+      <plugin id="org.eclipse.core.expressions"/>
+      <plugin id="org.eclipse.core.filesystem"/>
+      <plugin id="org.eclipse.core.filesystem.linux.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.filesystem.win32.x86" fragment="true"/>
+      <plugin id="org.eclipse.core.jobs"/>
+      <plugin id="org.eclipse.core.resources"/>
+      <plugin id="org.eclipse.core.resources.compatibility" fragment="true"/>
+      <plugin id="org.eclipse.core.runtime"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.auth"/>
+      <plugin id="org.eclipse.core.runtime.compatibility.registry" fragment="true"/>
+      <plugin id="org.eclipse.core.variables"/>
+      <plugin id="org.eclipse.emf.common"/>
+      <plugin id="org.eclipse.emf.commonj.sdo" fragment=""/>
+      <plugin id="org.eclipse.emf.ecore"/>
+      <plugin id="org.eclipse.emf.ecore.change"/>
+      <plugin id="org.eclipse.emf.ecore.sdo" fragment=""/>
+      <plugin id="org.eclipse.emf.ecore.xmi"/>
+      <plugin id="org.eclipse.equinox.app"/>
+      <plugin id="org.eclipse.equinox.common"/>
+      <plugin id="org.eclipse.equinox.preferences"/>
+      <plugin id="org.eclipse.equinox.registry"/>
+      <plugin id="org.eclipse.osgi"/>
+      <plugin id="org.eclipse.osgi.util"/>
+      <plugin id="org.eclipse.team.core"/>
+      <plugin id="org.eclipse.text"/>
+      <plugin id="org.eclipse.xsd"/>
+      <plugin id="org.junit"/>
+      <plugin id="rtc.cli.extension"/>
+   </plugins>
+
+
+</product>

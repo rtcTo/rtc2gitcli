@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="com.ibm.team.rtc.cli.infrastructure.subcommand">
+      <subcommand
+            class="to.rtc.cli.migrate.git.MigrateToGit"
+            id="to.rtc.cli.migrate.git.MigrateToGit"
+            initpolicy="uri/argument/ancestor"
+            name="migrate-to-git"
+            options="to.rtc.cli.migrate.git.MigrateToGitOptions"
+            shortHelp="migrate to git">
+      </subcommand>
+   </extension>
+</plugin>
