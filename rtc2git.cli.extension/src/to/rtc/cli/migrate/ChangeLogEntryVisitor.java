@@ -34,14 +34,16 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private String workspace;
   private boolean initialLoadDone = false;
   private final Migrator migrator;
+  private final AcceptCommandDelegate acceptCommand;
+  private final LoadCommandDelegate loadCommand;
 
   private void acceptAndLoadBaseline(IScmClientConfiguration config2, String workspace2, String baselineItemId) throws CLIClientException {
-    AcceptCommandDelegate.runAcceptBaseline(config, workspace, baselineItemId);
+    acceptCommand.runAcceptBaseline(config, workspace, baselineItemId);
     handleInitialLoad();
   }
 
   private void acceptAndLoadChangeset(IScmClientConfiguration config2, String workspace2, String changeSetUuid) throws CLIClientException {
-    AcceptCommandDelegate.runAcceptChangeSet(config, workspace, changeSetUuid);
+    acceptCommand.runAcceptChangeSet(config, workspace, changeSetUuid);
     handleInitialLoad();
   }
 
@@ -53,7 +55,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private void handleInitialLoad() {
     if (!initialLoadDone) {
       try {
-        LoadCommandDelegate.runLoad(config, workspace, true);
+        loadCommand.runLoad(config, workspace, true);
         initialLoadDone = true;
       } catch (CLIClientException e) {
         throw new RuntimeException("Not a valid sandbox. Please run [scm load] before [scm migrate-to-git] command");
@@ -65,7 +67,8 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     this.config = config;
     this.workspace = workspace;
     this.migrator = migrator;
-
+    this.acceptCommand = new AcceptCommandDelegate();
+    this.loadCommand = new LoadCommandDelegate();
     setOutput(out);
   }
 
