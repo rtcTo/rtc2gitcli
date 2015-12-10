@@ -9,6 +9,7 @@ import java.util.Map;
 import to.rtc.cli.migrate.command.AcceptCommandDelegate;
 import to.rtc.cli.migrate.command.LoadCommandDelegate;
 
+import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogBaselineEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogChangeSetEntryDTO;
@@ -112,7 +113,15 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   }
 
   private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
-    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
+    int result = new AcceptCommandDelegate(config, workspace, changeSetUuid, false, false).run();
+    if (Constants.STATUS_GAP == result) {
+      stdout().println("Retry accepting with --accept-missing-changesets");
+      result = new AcceptCommandDelegate(config, workspace, changeSetUuid, false, true).run();
+      if (Constants.STATUS_GAP == result) {
+        throw new CLIClientException("There was a GAP in accepting that we cannot resolve.");
+      }
+
+    }
     handleInitialLoad();
   }
 

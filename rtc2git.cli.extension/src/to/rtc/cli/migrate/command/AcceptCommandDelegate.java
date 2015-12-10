@@ -20,9 +20,10 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 @SuppressWarnings("restriction")
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
-  public AcceptCommandDelegate(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline) {
+  public AcceptCommandDelegate(IScmClientConfiguration config, String targetWorkspace, String changeSetUuid, boolean baseline,
+      boolean acceptMissingChangesets) {
     super(config, "accept " + targetWorkspace + " " + changeSetUuid + " baseline[" + baseline + "]");
-    setSubCommandLine(targetWorkspace, changeSetUuid, baseline);
+    setSubCommandLine(targetWorkspace, changeSetUuid, baseline, acceptMissingChangesets);
   }
 
   @Override
@@ -32,20 +33,23 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
     } catch (CLIClientException e) {
       IStatus status = e.getStatus();
       if (status != null) {
-        boolean conflict = Constants.STATUS_CONFLICT == status.getCode();
-        boolean nway_conflict = Constants.STATUS_NWAY_CONFLICT == status.getCode();
-        boolean workspace_unchanged = Constants.STATUS_WORKSPACE_UNCHANGED == status.getCode();
-        if (conflict || nway_conflict || workspace_unchanged) {
-          String statusText = "CONFLICT";
-          if (nway_conflict) {
-            statusText = "NWAY_CONFLICT";
-          } else if (workspace_unchanged) {
-            statusText = "WORKSPACE_UNCHANGED";
-          }
-          stdout().println("There was a [" + statusText + "]. We ignore that, because the following accepts should fix that");
-          return -1;
+        switch (status.getCode()) {
+          case Constants.STATUS_GAP:
+            stdout().println("There was a [GAP]. We ignore that, because the following accepts should fix that");
+            return Constants.STATUS_GAP;
+          case Constants.STATUS_CONFLICT:
+            stdout().println("There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
+            return Constants.STATUS_CONFLICT;
+          case Constants.STATUS_NWAY_CONFLICT:
+            stdout().println("There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
+            return Constants.STATUS_NWAY_CONFLICT;
+          case Constants.STATUS_WORKSPACE_UNCHANGED:
+            stdout().println("There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
+            return Constants.STATUS_WORKSPACE_UNCHANGED;
+          default:
+            stderr().println("There was an unexpected exception with state [" + status.getCode() + "]");
+            break;
         }
-        stderr().println("There was an unexpected exception with state [" + status.getCode() + "]");
       }
       throw e;
     }
@@ -61,19 +65,22 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
     return new AcceptCmdOptions().getOptions();
   }
 
-  void setSubCommandLine(String targetWorkspace, String changeSetUuid, boolean isBaseline) {
+  void setSubCommandLine(String targetWorkspace, String changeSetUuid, boolean isBaseline, boolean acceptMissingChangesets) {
     String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
     String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
     String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
-    setSubCommandLine(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline));
+    setSubCommandLine(config,
+        generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline, acceptMissingChangesets));
   }
 
   private ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace, String changeSetUuid,
-      boolean isBaseline) {
+      boolean isBaseline, boolean acceptMissingChangesets) {
     List<String> args = new ArrayList<String>();
     args.add("-o");
     args.add("--no-merge");
-    args.add("--accept-missing-changesets");
+    if (acceptMissingChangesets) {
+      args.add("--accept-missing-changesets");
+    }
     args.add("-r");
     args.add(uri);
     args.add("-t");
