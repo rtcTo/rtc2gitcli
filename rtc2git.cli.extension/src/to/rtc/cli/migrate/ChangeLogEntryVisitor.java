@@ -4,6 +4,7 @@ package to.rtc.cli.migrate;
 import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import to.rtc.cli.migrate.command.AcceptCommandDelegate;
 import to.rtc.cli.migrate.command.LoadCommandDelegate;
@@ -23,18 +24,19 @@ import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 
 public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
-  private static final String CLENTRY_BASELINE_NAME = "clentry_baseline";
-  private ChangeLogEntryDTO oldBaseline;
   private IScmClientConfiguration config;
   private String workspace;
   private boolean initialLoadDone;
   private final Migrator migrator;
+  private Map<String, Tag> tagMap;
 
-  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator) {
+  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator,
+      Map<String, Tag> tagMap) {
     initialLoadDone = false;
     this.config = config;
     this.workspace = workspace;
     this.migrator = migrator;
+    this.tagMap = tagMap;
     setOutput(out);
   }
 
@@ -79,18 +81,13 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
       }
     }
     final String changeSetUuid = dto.getItemId();
-    config
-        .getContext()
-        .stdout()
-        .println(
-            handleBaselineChange(parent) + " [" + changeSetUuid + "], Story [" + workItemText + "] Comment [" + dto.getEntryName()
-                + "] User [" + dto.getCreator().getFullName() + "]");
     try {
       acceptAndLoadChangeSet(changeSetUuid);
-      ChangeSet changeSet = new ChangeSet(changeSetUuid).setWorkItem(workItemText).setText(dto.getEntryName())
+      ChangeSet changeSet = (new ChangeSet(changeSetUuid)).setWorkItem(workItemText).setText(dto.getEntryName())
           .setCreatorName(dto.getCreator().getFullName()).setCreatorEMail(dto.getCreator().getEmailAddress())
           .setCreationDate(dto.getCreationDate());
       migrator.commitChanges(changeSet);
+      handleBaselineChange(dto);
     } catch (CLIClientException e) {
       throw new RuntimeException(e);
     }
@@ -100,38 +97,21 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     return config.getContext().stdout();
   }
 
-  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
-    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
-    handleInitialLoad();
-  }
-
-  private String handleBaselineChange(ChangeLogEntryDTO parent) {
-    if (oldBaseline != null && !parent.getItemId().equals(oldBaseline.getItemId())) {
-      if (CLENTRY_BASELINE_NAME.equals(oldBaseline.getEntryType())) {
-        ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)oldBaseline;
-        // Accept baseline to target workspace
-        try {
-          Tag tag = new Tag(baseline.getItemId()).setName(baseline.getEntryName()).setCreationDate(baseline.getCreationDate());
-          migrator.createTag(tag);
-          acceptAndLoadBaseline(baseline.getItemId());
-        } catch (CLIClientException e) {
-          e.printStackTrace();
-        }
-      }
-      oldBaseline = parent;
-    }
-
-    if (CLENTRY_BASELINE_NAME.equals(parent.getEntryType())) {
-      ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)parent;
-      oldBaseline = baseline;
-      return baseline.getBaselineId() + ":" + baseline.getEntryName() + " --> ";
-    } else {
-      return " NO BASELINE --> ";
+  private void handleBaselineChange(ChangeLogEntryDTO parent) throws CLIClientException {
+    Tag tag = tagMap.get(parent.getItemId());
+    if (tag != null) {
+      migrator.createTag(tag);
+      acceptAndLoadBaseline(tag.getUuid());
     }
   }
 
   private void acceptAndLoadBaseline(String baselineItemId) throws CLIClientException {
     new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
+    handleInitialLoad();
+  }
+
+  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
+    new AcceptCommandDelegate(config, workspace, changeSetUuid, false).run();
     handleInitialLoad();
   }
 
