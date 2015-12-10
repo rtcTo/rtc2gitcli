@@ -34,14 +34,11 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
       if (status != null) {
         boolean conflict = Constants.STATUS_CONFLICT == status.getCode();
         boolean nway_conflict = Constants.STATUS_NWAY_CONFLICT == status.getCode();
-        boolean gap = Constants.STATUS_GAP == status.getCode();
         boolean workspace_unchanged = Constants.STATUS_WORKSPACE_UNCHANGED == status.getCode();
-        if (conflict || nway_conflict || gap || workspace_unchanged) {
+        if (conflict || nway_conflict || workspace_unchanged) {
           String statusText = "CONFLICT";
           if (nway_conflict) {
             statusText = "NWAY_CONFLICT";
-          } else if (gap) {
-            statusText = "GAP";
           } else if (workspace_unchanged) {
             statusText = "WORKSPACE_UNCHANGED";
           }
@@ -76,6 +73,7 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
     List<String> args = new ArrayList<String>();
     args.add("-o");
     args.add("--no-merge");
+    args.add("--accept-missing-changesets");
     args.add("-r");
     args.add(uri);
     args.add("-t");
