@@ -71,9 +71,9 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   }
 
   @Override
-  protected void visitChangeSet(ChangeLogEntryDTO parent, ChangeLogChangeSetEntryDTO dto) {
+  protected void visitChangeSet(ChangeLogEntryDTO parent, ChangeLogChangeSetEntryDTO changeset) {
     String workItemText = "";
-    List<?> workItems = dto.getWorkItems();
+    List<?> workItems = changeset.getWorkItems();
     if (workItems != null && !workItems.isEmpty()) {
       final ChangeLogWorkItemEntryDTO workItem = (ChangeLogWorkItemEntryDTO)workItems.get(0);
       workItemText = workItem.getWorkItemNumber() + ": " + workItem.getEntryName();
@@ -81,14 +81,14 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
         workItemText = workItemText.substring(0, 10);
       }
     }
-    final String changeSetUuid = dto.getItemId();
+    final String changeSetUuid = changeset.getItemId();
     try {
       acceptAndLoadChangeSet(changeSetUuid);
-      ChangeSet changeSet = (new ChangeSet(changeSetUuid)).setWorkItem(workItemText).setText(dto.getEntryName())
-          .setCreatorName(dto.getCreator().getFullName()).setCreatorEMail(dto.getCreator().getEmailAddress())
-          .setCreationDate(dto.getCreationDate());
+      ChangeSet changeSet = (new ChangeSet(changeSetUuid)).setWorkItem(workItemText).setText(changeset.getEntryName())
+          .setCreatorName(changeset.getCreator().getFullName()).setCreatorEMail(changeset.getCreator().getEmailAddress())
+          .setCreationDate(changeset.getCreationDate());
       migrator.commitChanges(changeSet);
-      handleBaselineChange(dto);
+      handleBaselineChange(changeset);
     } catch (CLIClientException e) {
       throw new RuntimeException(e);
     }
@@ -98,8 +98,8 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     return config.getContext().stdout();
   }
 
-  private void handleBaselineChange(ChangeLogEntryDTO parent) throws CLIClientException {
-    Tag tag = tagMap.get(parent.getItemId());
+  private void handleBaselineChange(ChangeLogChangeSetEntryDTO changeset) {
+    Tag tag = tagMap.get(changeset.getItemId());
     if (tag != null) {
       migrator.createTag(tag);
       acceptAndLoadBaseline(tag.getUuid());
