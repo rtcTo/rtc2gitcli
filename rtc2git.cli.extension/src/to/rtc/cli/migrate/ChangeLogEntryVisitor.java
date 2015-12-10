@@ -105,8 +105,9 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
     }
   }
 
-  private void acceptAndLoadBaseline(String baselineItemId) throws CLIClientException {
-    new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
+  private void acceptAndLoadBaseline(String baselineItemId) {
+    // Baselines could not be successfully accepted by rtc cli, therefore do not do it
+    // new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
     handleInitialLoad();
   }
 
