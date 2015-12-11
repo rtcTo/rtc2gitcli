@@ -1,10 +1,7 @@
 
 package to.rtc.cli.migrate.git;
 
-import static java.nio.file.Files.exists;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -18,17 +15,24 @@ import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
- * 
- * @author patrick.reinhart {@linkplain https://github.com/centic9/jgit-cookbook}
+ * @author patrick.reinhart
+ * @see <a href="https://github.com/centic9/jgit-cookbook">https://github.com/centic9/jgit-cookbook</a>
  */
-public class GitTest {
+public class GitPlainTest {
+  @Rule
+  public TemporaryFolder tempFolder = new TemporaryFolder();
+
   static final Pattern gitIgnorePattern = Pattern.compile("^.*(/|)\\.gitignore$");
   static final Pattern jazzIgnorePattern = Pattern.compile("^.*(/|)\\.jazzignore$");
 
-  public static void main(String[] args) throws Exception {
-    Path gitDir = Paths.get("/tmp/test");
+  @Test
+  public void plainJGit() throws Exception {
+    File gitDir = tempFolder.getRoot();
     Git git = init(gitDir);
     try {
       // add all untracked files
@@ -69,17 +73,23 @@ public class GitTest {
       // execute the git index commands if needed
       if (!toAdd.isEmpty()) {
         AddCommand add = git.add();
-        toAdd.forEach(add::addFilepattern);
+        for (String filepattern : toAdd) {
+          add.addFilepattern(filepattern);
+        }
         add.call();
       }
       if (!toRemove.isEmpty()) {
         RmCommand rm = git.rm();
-        toRemove.forEach(rm::addFilepattern);
+        for (String filepattern : toRemove) {
+          rm.addFilepattern(filepattern);
+        }
         rm.call();
       }
       if (!toRestore.isEmpty()) {
         CheckoutCommand checkout = git.checkout();
-        toRestore.forEach(checkout::addPath);
+        for (String filepattern : toRestore) {
+          checkout.addPath(filepattern);
+        }
         checkout.call();
       }
 
@@ -89,32 +99,21 @@ public class GitTest {
             (int)TimeUnit.HOURS.toMillis(1));
         git.commit().setMessage("auto commit").setAuthor(ident).setCommitter(ident).call();
       }
-
     } finally {
       git.close();
     }
   }
 
-  private static Git init(Path gitDir) throws Exception {
-    if (exists(gitDir)) {
+  private Git init(File gitDir) throws Exception {
+    if (gitDir.exists()) {
       RepositoryBuilder repoBuilder = new RepositoryBuilder();
-      repoBuilder.setGitDir(gitDir.resolve(".git").toFile());
+      repoBuilder.setGitDir(new File(gitDir, ".git"));
       repoBuilder.readEnvironment();
       repoBuilder.findGitDir();
       Repository repo = repoBuilder.build();
       return new Git(repo);
     } else {
-      return Git.init().setDirectory(gitDir.toFile()).call();
+      return Git.init().setDirectory(gitDir).call();
     }
-  }
-
-  interface ElementCallback {
-    /**
-     * @param gitRoot GIT root directory
-     * @param removed <code>true</code> if element was removed, <code>false</code> otherwise
-     * @param name the relative file name to the GIT directory
-     * @return <code>true</code> to add/rm it the GIT index
-     */
-    boolean handleElement(Path gitRoot, boolean removed, String name);
   }
 }

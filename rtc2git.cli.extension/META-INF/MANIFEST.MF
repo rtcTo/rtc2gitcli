@@ -24,3 +24,4 @@ Import-Package: com.ibm.team.filesystem.cli.client,
  com.ibm.team.rtc.cli.infrastructure.internal.core,
  com.ibm.team.rtc.cli.infrastructure.internal.parser,
  com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions
+Bundle-ClassPath: to.rtc.cli.migration.jar
