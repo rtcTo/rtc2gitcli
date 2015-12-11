@@ -4,6 +4,7 @@
 
 package to.rtc.cli.migrate;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -95,8 +96,16 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
       ChangeLogEntryDTO changelog;
       changelog = clOp.run(getMonitor());
 
+      File sandboxDirectory;
+      if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
+        sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
+      } else {
+        sandboxDirectory = new File(System.getProperty("user.dir"));
+      }
+
       Migrator migrator = getMigrator();
       try {
+        migrator.init(sandboxDirectory);
         ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
             destinationWs.getName(), migrator);
         visitor.init();

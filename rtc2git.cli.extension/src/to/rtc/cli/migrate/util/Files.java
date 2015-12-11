@@ -35,17 +35,21 @@ public class Files {
    * @throws IOException if the read operation fails
    */
   public static List<String> readLines(File file, Charset cs) throws IOException {
-    FileInputStream in = new FileInputStream(file);
-    try {
-      BufferedReader br = new BufferedReader(new InputStreamReader(in, cs));
-      List<String> lines = new ArrayList<String>();
-      String line = null;
-      while ((line = br.readLine()) != null) {
-        lines.add(line);
+    if (file.exists()) {
+      FileInputStream in = new FileInputStream(file);
+      try {
+        BufferedReader br = new BufferedReader(new InputStreamReader(in, cs));
+        List<String> lines = new ArrayList<String>();
+        String line = null;
+        while ((line = br.readLine()) != null) {
+          lines.add(line);
+        }
+        return lines;
+      } finally {
+        in.close();
       }
-      return lines;
-    } finally {
-      in.close();
+    } else {
+      return new ArrayList<String>();
     }
   }
 
