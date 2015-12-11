@@ -4,7 +4,7 @@
  * Copyright (c) 2015 BISON Schweiz AG, All Rights Reserved.
  */
 
-package to.rtc.cli.util;
+package to.rtc.cli.migrate.util;
 
 import java.io.BufferedReader;
 import java.io.File;
