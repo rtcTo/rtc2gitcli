@@ -9,6 +9,12 @@ package to.rtc.cli.migrate;
  *
  */
 public interface Migrator {
+
+  /**
+   * Releases all resources
+   */
+  void close();
+
   void createTag(Tag tag);
 
   void commitChanges(ChangeSet changeSet);

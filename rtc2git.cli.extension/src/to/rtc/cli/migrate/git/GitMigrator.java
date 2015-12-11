@@ -8,6 +8,10 @@ import to.rtc.cli.migrate.Tag;
 public class GitMigrator implements Migrator {
 
   @Override
+  public void close() {
+  }
+
+  @Override
   public void createTag(Tag tag) {
     System.out.println("GIT: create tag [" + tag.getName() + "].");
 

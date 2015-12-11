@@ -78,9 +78,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
     SnapshotId sourceSnapshotId = SnapshotId.getSnapshotId(sourceWsHandle);
     SnapshotId destinationSnapshotId = SnapshotId.getSnapshotId(destinationWsHandle);
-    SnapshotSyncReport syncReport;
     try {
-      syncReport = SnapshotSyncReport.compare(destinationSnapshotId.getSnapshot(null), sourceSnapshotId.getSnapshot(null), null, null);
+      SnapshotSyncReport syncReport = SnapshotSyncReport.compare(destinationSnapshotId.getSnapshot(null),
+          sourceSnapshotId.getSnapshot(null), null, null);
       GenerateChangeLogOperation clOp = new GenerateChangeLogOperation();
       ChangeLogCustomizer customizer = new ChangeLogCustomizer();
 
@@ -95,11 +95,15 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
       ChangeLogEntryDTO changelog;
       changelog = clOp.run(getMonitor());
 
-      ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
-          destinationWs.getName(), getMigrator());
-
-      visitor.init();
-      visitor.acceptInto(changelog);
+      Migrator migrator = getMigrator();
+      try {
+        ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
+            destinationWs.getName(), migrator);
+        visitor.init();
+        visitor.acceptInto(changelog);
+      } finally {
+        migrator.close();
+      }
     } catch (TeamRepositoryException e) {
       e.printStackTrace();
     }
