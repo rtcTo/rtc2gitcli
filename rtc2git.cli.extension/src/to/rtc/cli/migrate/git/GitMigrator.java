@@ -25,6 +25,11 @@ import to.rtc.cli.migrate.util.Files;
 
 import com.ibm.team.repository.common.TeamRepositoryException;
 
+/**
+ * Git implementation of a {@link Migrator}.
+ *
+ * @author patrick.reinhart
+ */
 public class GitMigrator implements Migrator {
   static final Pattern gitIgnorePattern = Pattern.compile("^.*(/|)\\.gitignore$");
   static final Pattern jazzIgnorePattern = Pattern.compile("^.*(/|)\\.jazzignore$");

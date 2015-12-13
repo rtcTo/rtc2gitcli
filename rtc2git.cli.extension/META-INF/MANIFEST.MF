@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: RTC to GIT export extension
 Bundle-SymbolicName: to.rtc.cli.migrate;singleton:=true
 Bundle-Version: 0.0.1
-Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Require-Bundle: com.ibm.team.filesystem.cli.core;bundle-version="3.2.300",
  com.ibm.team.filesystem.client;bundle-version="3.2.300",
  com.ibm.team.filesystem.common;bundle-version="3.2.300",

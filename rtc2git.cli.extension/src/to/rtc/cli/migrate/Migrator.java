@@ -10,9 +10,9 @@ import com.ibm.team.repository.common.TeamRepositoryException;
 
 /**
  * @author florian.buehlmann
- *
+ * @author patrick.reinhart
  */
-public interface Migrator {
+public interface Migrator extends AutoCloseable {
 
   /**
    * Initializes the migration implementation with the given <code>sandboxRootDirectory</code>.
@@ -24,6 +24,7 @@ public interface Migrator {
   /**
    * Releases all resources
    */
+  @Override
   void close();
 
   void createTag(Tag tag);

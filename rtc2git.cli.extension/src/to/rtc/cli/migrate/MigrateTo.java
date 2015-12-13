@@ -103,15 +103,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
         sandboxDirectory = new File(System.getProperty("user.dir"));
       }
 
-      Migrator migrator = getMigrator();
-      try {
+      try (Migrator migrator = getMigrator()) {
         migrator.init(sandboxDirectory);
         ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
             destinationWs.getName(), migrator);
         visitor.init();
         visitor.acceptInto(changelog);
-      } finally {
-        migrator.close();
       }
     } catch (TeamRepositoryException e) {
       e.printStackTrace();
