@@ -6,8 +6,6 @@ package to.rtc.cli.migrate;
 
 import java.io.File;
 
-import com.ibm.team.repository.common.TeamRepositoryException;
-
 /**
  * @author florian.buehlmann
  * @author patrick.reinhart
@@ -19,7 +17,7 @@ public interface Migrator extends AutoCloseable {
    * 
    * @param sandboxRootDirectory the sand box root directory
    */
-  void init(File sandboxRootDirectory) throws TeamRepositoryException;
+  void init(File sandboxRootDirectory);
 
   /**
    * Releases all resources

@@ -1,15 +1,15 @@
-/**
- *
- */
 
 package to.rtc.cli.migrate;
 
+import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import to.rtc.cli.migrate.command.AcceptCommandDelegate;
 import to.rtc.cli.migrate.command.LoadCommandDelegate;
 
+import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogBaselineEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogChangeSetEntryDTO;
@@ -23,26 +23,22 @@ import com.ibm.team.filesystem.rcp.core.internal.changelog.BaseChangeLogEntryVis
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 
-/**
- * @author florian.buehlmann
- *
- */
 public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
-  private ChangeLogEntryDTO oldBaseline;
   private IScmClientConfiguration config;
   private String workspace;
-  private boolean initialLoadDone = false;
+  private boolean initialLoadDone;
   private final Migrator migrator;
+  private Map<String, Tag> tagMap;
 
-  private void acceptAndLoadBaseline(IScmClientConfiguration config2, String workspace2, String baselineItemId) throws CLIClientException {
-    AcceptCommandDelegate.runAcceptBaseline(config, workspace, baselineItemId);
-    handleInitialLoad();
-  }
-
-  private void acceptAndLoadChangeset(IScmClientConfiguration config2, String workspace2, String changeSetUuid) throws CLIClientException {
-    AcceptCommandDelegate.runAcceptChangeSet(config, workspace, changeSetUuid);
-    handleInitialLoad();
+  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator,
+      Map<String, Tag> tagMap) {
+    initialLoadDone = false;
+    this.config = config;
+    this.workspace = workspace;
+    this.migrator = migrator;
+    this.tagMap = tagMap;
+    setOutput(out);
   }
 
   public void init() {
@@ -53,24 +49,18 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   private void handleInitialLoad() {
     if (!initialLoadDone) {
       try {
-        LoadCommandDelegate.runLoad(config, workspace, true);
+        new LoadCommandDelegate(config, workspace, true).run();
         initialLoadDone = true;
-      } catch (CLIClientException e) {
-        throw new RuntimeException("Not a valid sandbox. Please run [scm load] before [scm migrate-to-git] command");
+      } catch (CLIClientException e) {// ignore
+        throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace + "] before [scm migrate-to-git] command");
       }
     }
   }
 
-  public ChangeLogEntryVisitor(IChangeLogOutput out, IScmClientConfiguration config, String workspace, Migrator migrator) {
-    this.config = config;
-    this.workspace = workspace;
-    this.migrator = migrator;
-
-    setOutput(out);
-  }
-
-  public void acceptInto(ChangeLogEntryDTO root) {
-    if (!enter(root)) return;
+  void acceptInto(ChangeLogEntryDTO root) {
+    if (!enter(root)) {
+      return;
+    }
     for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator.hasNext();) {
       ChangeLogEntryDTO child = (ChangeLogEntryDTO)iterator.next();
       visitChild(root, child);
@@ -81,9 +71,9 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
   }
 
   @Override
-  protected void visitChangeSet(ChangeLogEntryDTO parent, ChangeLogChangeSetEntryDTO dto) {
+  protected void visitChangeSet(ChangeLogEntryDTO parent, ChangeLogChangeSetEntryDTO changeset) {
     String workItemText = "";
-    List<?> workItems = dto.getWorkItems();
+    List<?> workItems = changeset.getWorkItems();
     if (workItems != null && !workItems.isEmpty()) {
       final ChangeLogWorkItemEntryDTO workItem = (ChangeLogWorkItemEntryDTO)workItems.get(0);
       workItemText = workItem.getWorkItemNumber() + ": " + workItem.getEntryName();
@@ -91,44 +81,48 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
         workItemText = workItemText.substring(0, 10);
       }
     }
-    final String changeSetUuid = dto.getItemId();
-    System.out.println(handleBaselineChange(parent) + " [" + changeSetUuid + "], Story [" + workItemText + "] Comment ["
-        + dto.getEntryName() + "] User [" + dto.getCreator().getFullName() + "]");
+    final String changeSetUuid = changeset.getItemId();
     try {
-      acceptAndLoadChangeset(config, workspace, changeSetUuid);
-      ChangeSet changeSet = new ChangeSet(changeSetUuid).setWorkItem(workItemText).setText(dto.getEntryName())
-          .setCreatorName(dto.getCreator().getFullName()).setCreatorEMail(dto.getCreator().getEmailAddress())
-          .setCreationDate(dto.getCreationDate());
+      acceptAndLoadChangeSet(changeSetUuid);
+      ChangeSet changeSet = (new ChangeSet(changeSetUuid)).setWorkItem(workItemText).setText(changeset.getEntryName())
+          .setCreatorName(changeset.getCreator().getFullName()).setCreatorEMail(changeset.getCreator().getEmailAddress())
+          .setCreationDate(changeset.getCreationDate());
       migrator.commitChanges(changeSet);
+      handleBaselineChange(changeset);
     } catch (CLIClientException e) {
-      e.printStackTrace();
+      throw new RuntimeException(e);
     }
   }
 
-  private String handleBaselineChange(ChangeLogEntryDTO parent) {
-    if (oldBaseline != null && !parent.getItemId().equals(oldBaseline.getItemId())) {
-      if ("clentry_baseline".equals(oldBaseline.getEntryType())) {
-        ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)oldBaseline;
-        // Accept baseline to target workspace
-        try {
-          Tag tag = new Tag(baseline.getItemId()).setName(baseline.getEntryName()).setCreationDate(baseline.getCreationDate());
-          migrator.createTag(tag);
-          acceptAndLoadBaseline(config, workspace, baseline.getItemId());
-        } catch (CLIClientException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
-      }
-      oldBaseline = parent;
-    }
+  private PrintStream stdout() {
+    return config.getContext().stdout();
+  }
 
-    if ("clentry_baseline".equals(parent.getEntryType())) {
-      ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO)parent;
-      oldBaseline = baseline;
-      return baseline.getBaselineId() + ":" + baseline.getEntryName() + " --> ";
-    } else {
-      return " NO BASELINE --> ";
+  private void handleBaselineChange(ChangeLogChangeSetEntryDTO changeset) {
+    Tag tag = tagMap.get(changeset.getItemId());
+    if (tag != null) {
+      migrator.createTag(tag);
+      acceptAndLoadBaseline(tag.getUuid());
     }
+  }
+
+  private void acceptAndLoadBaseline(String baselineItemId) {
+    // Baselines could not be successfully accepted by rtc cli, therefore do not do it
+    // new AcceptCommandDelegate(config, workspace, baselineItemId, true).run();
+    handleInitialLoad();
+  }
+
+  private void acceptAndLoadChangeSet(String changeSetUuid) throws CLIClientException {
+    int result = new AcceptCommandDelegate(config, workspace, changeSetUuid, false, false).run();
+    if (Constants.STATUS_GAP == result) {
+      stdout().println("Retry accepting with --accept-missing-changesets");
+      result = new AcceptCommandDelegate(config, workspace, changeSetUuid, false, true).run();
+      if (Constants.STATUS_GAP == result) {
+        throw new CLIClientException("There was a GAP in accepting that we cannot resolve.");
+      }
+
+    }
+    handleInitialLoad();
   }
 
   @Override
@@ -137,6 +131,13 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
   @Override
   protected void visitComponent(ChangeLogEntryDTO parent, ChangeLogComponentEntryDTO dto) {
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("---------------------" + dto.getEntryName() + "----------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
+    stdout().println("------------------------------------------------------------------");
   }
 
   @Override

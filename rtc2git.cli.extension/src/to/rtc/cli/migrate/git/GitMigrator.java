@@ -14,6 +14,7 @@ import org.eclipse.jgit.api.CheckoutCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryBuilder;
@@ -22,8 +23,6 @@ import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.Migrator;
 import to.rtc.cli.migrate.Tag;
 import to.rtc.cli.migrate.util.Files;
-
-import com.ibm.team.repository.common.TeamRepositoryException;
 
 /**
  * Git implementation of a {@link Migrator}.
@@ -128,7 +127,7 @@ public class GitMigrator implements Migrator {
   }
 
   @Override
-  public void init(File sandboxRootDirectory) throws TeamRepositoryException {
+  public void init(File sandboxRootDirectory) {
     try {
       File bareGitDirectory = new File(sandboxRootDirectory, ".git");
       if (bareGitDirectory.exists()) {
@@ -141,12 +140,12 @@ public class GitMigrator implements Migrator {
       } else if (sandboxRootDirectory.exists()) {
         git = Git.init().setDirectory(sandboxRootDirectory).call();
       } else {
-        throw new IOException(bareGitDirectory.getAbsolutePath() + " does not exist");
+        throw new RuntimeException(bareGitDirectory.getAbsolutePath() + " does not exist");
       }
       initRootGitIgnore(sandboxRootDirectory);
       gitCommit(new PersonIdent("Robocop", "john.doe@somewhere.com", System.currentTimeMillis(), 0), "initial commit");
-    } catch (Exception e) {
-      throw new TeamRepositoryException("Unable to initialize GIT repository", e);
+    } catch (IOException | GitAPIException e) {
+      throw new RuntimeException("Unable to initialize GIT repository", e);
     }
   }
 
