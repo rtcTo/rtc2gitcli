@@ -1,4 +1,3 @@
-
 package to.rtc.cli.migrate.git;
 
 import java.io.File;
@@ -21,99 +20,104 @@ import org.junit.rules.TemporaryFolder;
 
 /**
  * @author patrick.reinhart
- * @see <a href="https://github.com/centic9/jgit-cookbook">https://github.com/centic9/jgit-cookbook</a>
+ * @see <a
+ *      href="https://github.com/centic9/jgit-cookbook">https://github.com/centic9/jgit-cookbook</a>
  */
 public class GitPlainTest {
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
+	@Rule
+	public TemporaryFolder tempFolder = new TemporaryFolder();
 
-  static final Pattern gitIgnorePattern = Pattern.compile("^.*(/|)\\.gitignore$");
-  static final Pattern jazzIgnorePattern = Pattern.compile("^.*(/|)\\.jazzignore$");
+	static final Pattern gitIgnorePattern = Pattern
+			.compile("^.*(/|)\\.gitignore$");
+	static final Pattern jazzIgnorePattern = Pattern
+			.compile("^.*(/|)\\.jazzignore$");
 
-  @Test
-  public void plainJGit() throws Exception {
-    File gitDir = tempFolder.getRoot();
-    Git git = init(gitDir);
-    try {
-      // add all untracked files
-      Status status = git.status().call();
-      Set<String> toAdd = new HashSet<String>();
-      Set<String> toRemove = new HashSet<String>();
-      Set<String> toRestore = new HashSet<String>();
+	@Test
+	public void plainJGit() throws Exception {
+		File gitDir = tempFolder.getRoot();
+		Git git = init(gitDir);
+		try {
+			// add all untracked files
+			Status status = git.status().call();
+			Set<String> toAdd = new HashSet<String>();
+			Set<String> toRemove = new HashSet<String>();
+			Set<String> toRestore = new HashSet<String>();
 
-      // go over untracked files
-      for (String untracked : status.getUntracked()) {
-        // add it to the index
-        toAdd.add(untracked);
-      }
-      // go over modified files
-      for (String modified : status.getModified()) {
-        // adds a modified entry to the index
-        toAdd.add(modified);
-      }
+			// go over untracked files
+			for (String untracked : status.getUntracked()) {
+				// add it to the index
+				toAdd.add(untracked);
+			}
+			// go over modified files
+			for (String modified : status.getModified()) {
+				// adds a modified entry to the index
+				toAdd.add(modified);
+			}
 
-      // go over all deleted files
-      for (String removed : status.getMissing()) {
-        System.out.println("-: " + removed);
-        // adds a modified entry to the index
-        if (gitIgnorePattern.matcher(removed).matches()) {
-          // restore .gitignore files that where deleted
-          toRestore.add(removed);
-        } else {
-          toRemove.add(removed);
-        }
-      }
+			// go over all deleted files
+			for (String removed : status.getMissing()) {
+				System.out.println("-: " + removed);
+				// adds a modified entry to the index
+				if (gitIgnorePattern.matcher(removed).matches()) {
+					// restore .gitignore files that where deleted
+					toRestore.add(removed);
+				} else {
+					toRemove.add(removed);
+				}
+			}
 
-      // write(gitDir.resolve("testfile"), "abc".getBytes());
-      // toAdd.add("testfile");
+			// write(gitDir.resolve("testfile"), "abc".getBytes());
+			// toAdd.add("testfile");
 
-      // delete(gitDir.resolve("testfile"));
-      // toRemove.add("testfile");
+			// delete(gitDir.resolve("testfile"));
+			// toRemove.add("testfile");
 
-      // execute the git index commands if needed
-      if (!toAdd.isEmpty()) {
-        AddCommand add = git.add();
-        for (String filepattern : toAdd) {
-          add.addFilepattern(filepattern);
-        }
-        add.call();
-      }
-      if (!toRemove.isEmpty()) {
-        RmCommand rm = git.rm();
-        for (String filepattern : toRemove) {
-          rm.addFilepattern(filepattern);
-        }
-        rm.call();
-      }
-      if (!toRestore.isEmpty()) {
-        CheckoutCommand checkout = git.checkout();
-        for (String filepattern : toRestore) {
-          checkout.addPath(filepattern);
-        }
-        checkout.call();
-      }
+			// execute the git index commands if needed
+			if (!toAdd.isEmpty()) {
+				AddCommand add = git.add();
+				for (String filepattern : toAdd) {
+					add.addFilepattern(filepattern);
+				}
+				add.call();
+			}
+			if (!toRemove.isEmpty()) {
+				RmCommand rm = git.rm();
+				for (String filepattern : toRemove) {
+					rm.addFilepattern(filepattern);
+				}
+				rm.call();
+			}
+			if (!toRestore.isEmpty()) {
+				CheckoutCommand checkout = git.checkout();
+				for (String filepattern : toRestore) {
+					checkout.addPath(filepattern);
+				}
+				checkout.call();
+			}
 
-      // execute commit if something has changed
-      if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
-        PersonIdent ident = new PersonIdent("Robocop", "john.doe@somewhere.com", System.currentTimeMillis(),
-            (int)TimeUnit.HOURS.toMillis(1));
-        git.commit().setMessage("auto commit").setAuthor(ident).setCommitter(ident).call();
-      }
-    } finally {
-      git.close();
-    }
-  }
+			// execute commit if something has changed
+			if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+				PersonIdent ident = new PersonIdent("Robocop",
+						"john.doe@somewhere.com", System.currentTimeMillis(),
+						(int) TimeUnit.HOURS.toMillis(1));
+				git.commit().setMessage("auto commit").setAuthor(ident)
+						.setCommitter(ident).call();
+			}
+		} finally {
+			git.close();
+		}
+	}
 
-  private Git init(File gitDir) throws Exception {
-    if (gitDir.exists()) {
-      RepositoryBuilder repoBuilder = new RepositoryBuilder();
-      repoBuilder.setGitDir(new File(gitDir, ".git"));
-      repoBuilder.readEnvironment();
-      repoBuilder.findGitDir();
-      Repository repo = repoBuilder.build();
-      return new Git(repo);
-    } else {
-      return Git.init().setDirectory(gitDir).call();
-    }
-  }
+	private Git init(File gitDir) throws Exception {
+		if (gitDir.exists()) {
+			RepositoryBuilder repoBuilder = new RepositoryBuilder();
+			repoBuilder.setGitDir(new File(gitDir, ".git"));
+			repoBuilder.readEnvironment();
+			repoBuilder.findGitDir();
+			Repository repo = repoBuilder.build();
+			return new Git(repo);
+		} else {
+			return Git.init().setDirectory(gitDir).call();
+		}
+	}
 }

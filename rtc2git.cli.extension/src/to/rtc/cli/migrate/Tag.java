@@ -10,34 +10,34 @@ package to.rtc.cli.migrate;
  */
 public class Tag {
 
-  private final String uuid;
-  private String name;
-  private long creationDate;
+	private final String uuid;
+	private String name;
+	private long creationDate;
 
-  Tag(String uuid) {
-    this.uuid = uuid;
-  }
+	Tag(String uuid) {
+		this.uuid = uuid;
+	}
 
-  Tag setCreationDate(long creationDate) {
-    this.creationDate = creationDate;
-    return this;
-  }
+	Tag setCreationDate(long creationDate) {
+		this.creationDate = creationDate;
+		return this;
+	}
 
-  Tag setName(String name) {
-    this.name = name;
-    return this;
-  }
+	Tag setName(String name) {
+		this.name = name;
+		return this;
+	}
 
-  String getUuid() {
-    return uuid;
-  }
+	String getUuid() {
+		return uuid;
+	}
 
-  public String getName() {
-    return name;
-  }
+	public String getName() {
+		return name;
+	}
 
-  public long getCreationDate() {
-    return creationDate;
-  }
+	public long getCreationDate() {
+		return creationDate;
+	}
 
 }
