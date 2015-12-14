@@ -1,13 +1,10 @@
 package to.rtc.cli.migrate.git;
 
-import static java.nio.file.Files.exists;
-import static java.nio.file.Files.readAllLines;
-import static java.nio.file.Files.write;
-
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Formatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -23,8 +20,10 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
 
 import to.rtc.cli.migrate.ChangeSet;
+import to.rtc.cli.migrate.ChangeSet.WorkItem;
 import to.rtc.cli.migrate.Migrator;
 import to.rtc.cli.migrate.Tag;
+import to.rtc.cli.migrate.util.Files;
 
 /**
  * Git implementation of a {@link Migrator}.
@@ -55,17 +54,45 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
-	private void initRootGitIgnore(Path sandboxRootDirectory)
+	private void initRootGitIgnore(File sandboxRootDirectory)
 			throws IOException {
-		Path rootGitIgnore = sandboxRootDirectory.resolve(".gitignore");
-		List<String> ignored;
-		if (exists(rootGitIgnore)) {
-			ignored = readAllLines(rootGitIgnore, getCharset());
-			addMissing(ignored, ROOT_IGNORED_ENTRIES);
-		} else {
-			ignored = ROOT_IGNORED_ENTRIES;
+		File rootGitIgnore = new File(sandboxRootDirectory, ".gitignore");
+		List<String> ignored = Files.readLines(rootGitIgnore, getCharset());
+		addMissing(ignored, ROOT_IGNORED_ENTRIES);
+		Files.writeLines(rootGitIgnore, ignored, getCharset(), false);
+	}
+
+	String getCommitMessage(String workItemText, String comment) {
+		return String.format(
+				properties.getProperty("commit.message.format", "%1s %2s"),
+				workItemText, comment).trim();
+	}
+
+	String getWorkItemNumbers(List<WorkItem> workItems) {
+		if (workItems.isEmpty()) {
+			return "";
 		}
-		write(rootGitIgnore, ignored, getCharset());
+		final String format = properties.getProperty(
+				"rtc.workitem.number.format", "%s");
+		final String delimiter = properties.getProperty(
+				"rtc.workitem.number.delimiter", " ");
+		final StringBuilder sb = new StringBuilder();
+		boolean isFirst = true;
+		Formatter formatter = new Formatter(sb);
+		try {
+			for (WorkItem workItem : workItems) {
+				if (isFirst) {
+					isFirst = false;
+				} else {
+					sb.append(delimiter);
+				}
+				formatter.format(format, String.valueOf(workItem.getNumber()));
+			}
+
+		} finally {
+			formatter.close();
+		}
+		return sb.toString();
 	}
 
 	private void gitCommit(PersonIdent ident, String comment) {
@@ -89,7 +116,6 @@ public final class GitMigrator implements Migrator {
 
 			// go over all deleted files
 			for (String removed : status.getMissing()) {
-				System.out.println("-: " + removed);
 				// adds a modified entry to the index
 				if (GITIGNORE_PATTERN.matcher(removed).matches()) {
 					// restore .gitignore files that where deleted
@@ -141,15 +167,14 @@ public final class GitMigrator implements Migrator {
 	}
 
 	@Override
-	public void init(Path sandboxRootDirectory, Properties props) {
+	public void init(File sandboxRootDirectory, Properties props) {
 		this.properties = props;
 		try {
-			Path bareGitDirectory = sandboxRootDirectory.resolve(".git");
-			if (exists(bareGitDirectory)) {
-				git = Git.open(sandboxRootDirectory.toFile());
-			} else if (exists(sandboxRootDirectory)) {
-				git = Git.init().setDirectory(sandboxRootDirectory.toFile())
-						.call();
+			File bareGitDirectory = new File(sandboxRootDirectory, ".git");
+			if (bareGitDirectory.exists()) {
+				git = Git.open(sandboxRootDirectory);
+			} else if (sandboxRootDirectory.exists()) {
+				git = Git.init().setDirectory(sandboxRootDirectory).call();
 			} else {
 				throw new RuntimeException(bareGitDirectory + " does not exist");
 			}
@@ -158,8 +183,10 @@ public final class GitMigrator implements Migrator {
 					"rtc2git@rtc.to"));
 			initRootGitIgnore(sandboxRootDirectory);
 			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(),
-					0), "initial commit");
-		} catch (IOException | GitAPIException e) {
+					0), "Initial commit");
+		} catch (IOException e) {
+			throw new RuntimeException("Unable to initialize GIT repository", e);
+		} catch (GitAPIException e) {
 			throw new RuntimeException("Unable to initialize GIT repository", e);
 		}
 	}
@@ -176,11 +203,13 @@ public final class GitMigrator implements Migrator {
 		gitCommit(
 				new PersonIdent(changeset.getCreatorName(),
 						changeset.getEmailAddress(),
-						changeset.getCreationDate(), 0), changeset.getComment());
+						changeset.getCreationDate(), 0),
+				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()),
+						changeset.getComment()));
 	}
 
 	@Override
 	public void createTag(Tag tag) {
-		System.out.println("GIT: create tag [" + tag.getName() + "].");
+		// not yet implemented
 	}
 }

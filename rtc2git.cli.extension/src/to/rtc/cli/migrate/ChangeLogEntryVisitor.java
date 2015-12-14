@@ -74,29 +74,24 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 		exit(root);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	protected void visitChangeSet(ChangeLogEntryDTO parent,
 			ChangeLogChangeSetEntryDTO changeset) {
-		String workItemText = "";
-		List<?> workItems = changeset.getWorkItems();
-		if (workItems != null && !workItems.isEmpty()) {
-			final ChangeLogWorkItemEntryDTO workItem = (ChangeLogWorkItemEntryDTO) workItems
-					.get(0);
-			workItemText = workItem.getWorkItemNumber() + ": "
-					+ workItem.getEntryName();
-			if (workItemText.length() > 10) {
-				workItemText = workItemText.substring(0, 10);
-			}
-		}
 		final String changeSetUuid = changeset.getItemId();
 		try {
 			acceptAndLoadChangeSet(changeSetUuid);
-			ChangeSet changeSet = (new ChangeSet(changeSetUuid))
-					.setWorkItem(workItemText)
-					.setText(changeset.getEntryName())
+			RtcChangeSet changeSet = new RtcChangeSet(changeSetUuid);
+			for (ChangeLogWorkItemEntryDTO workItem : (List<ChangeLogWorkItemEntryDTO>) changeset
+					.getWorkItems()) {
+				changeSet.addWorkItem(workItem.getWorkItemNumber(),
+						workItem.getEntryName());
+			}
+			changeSet.setText(changeset.getEntryName())
 					.setCreatorName(changeset.getCreator().getFullName())
 					.setCreatorEMail(changeset.getCreator().getEmailAddress())
 					.setCreationDate(changeset.getCreationDate());
+
 			migrator.commitChanges(changeSet);
 			handleBaselineChange(changeset);
 		} catch (CLIClientException e) {

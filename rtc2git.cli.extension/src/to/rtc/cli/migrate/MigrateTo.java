@@ -1,15 +1,8 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
-import static java.nio.file.Files.newInputStream;
-
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +41,6 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 
 /**
  * @author florian.buehlmann
- *
  */
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements
@@ -100,21 +92,20 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 		ChangeLogEntryDTO changelog = compareWorkspaces(repo, sourceWs,
 				destinationWs);
 
-		Path sandboxDirectory;
+		File sandboxDirectory;
 		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
-			sandboxDirectory = Paths.get(subargs
-					.getOption(MigrateToOptions.OPT_DIRECTORY));
+			sandboxDirectory = new File(
+					subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
 		} else {
-			sandboxDirectory = Paths.get(System.getProperty("user.dir"));
+			sandboxDirectory = new File(System.getProperty("user.dir"));
 		}
-		try (Migrator migrator = getMigrator()) {
-			migrator.init(sandboxDirectory, readProperties(subargs));
-			ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(
-					new ChangeLogStreamOutput(config.getContext().stdout()),
-					config, destinationWs.getName(), getMigrator(), tagMap);
-			visitor.init();
-			visitor.acceptInto(changelog);
-		}
+		Migrator migrator = getMigrator();
+		migrator.init(sandboxDirectory, readProperties(subargs));
+		ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(
+				new ChangeLogStreamOutput(config.getContext().stdout()),
+				config, destinationWs.getName(), migrator, tagMap);
+		visitor.init();
+		visitor.acceptInto(changelog);
 		config.getContext()
 				.stdout()
 				.println(
@@ -123,10 +114,15 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 	}
 
 	private Properties readProperties(ICommandLine subargs) {
-		Properties props = new Properties();
-		try (InputStream in = newInputStream(Paths.get(subargs
-				.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES)))) {
-			props.load(in);
+		final Properties props = new Properties();
+		try {
+			FileInputStream in = new FileInputStream(
+					subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES));
+			try {
+				props.load(in);
+			} finally {
+				in.close();
+			}
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to read migration properties", e);
 		}

@@ -1,17 +1,13 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
-import java.nio.file.Path;
+import java.io.File;
 import java.util.Properties;
 
 /**
  * @author florian.buehlmann
  * @author patrick.reinhart
  */
-public interface Migrator extends AutoCloseable {
+public interface Migrator {
 
 	/**
 	 * Initializes the migration implementation with the given
@@ -22,12 +18,11 @@ public interface Migrator extends AutoCloseable {
 	 * @param properties
 	 *            the migration properties
 	 */
-	void init(Path sandboxRootDirectory, Properties properties);
+	void init(File sandboxRootDirectory, Properties properties);
 
 	/**
 	 * Releases all resources
 	 */
-	@Override
 	void close();
 
 	void createTag(Tag tag);

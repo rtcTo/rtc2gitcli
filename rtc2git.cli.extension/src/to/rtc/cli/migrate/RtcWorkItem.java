@@ -1,0 +1,29 @@
+/**
+ * File Name: RtcWorkItem.java
+ * 
+ * Copyright (c) 2015 BISON Schweiz AG, All Rights Reserved.
+ */
+
+package to.rtc.cli.migrate;
+
+import to.rtc.cli.migrate.ChangeSet.WorkItem;
+
+final class RtcWorkItem implements WorkItem {
+	private long number;
+	private String text;
+
+	RtcWorkItem(long number, String text) {
+		this.number = number;
+		this.text = text;
+	}
+
+	@Override
+	public long getNumber() {
+		return number;
+	}
+
+	@Override
+	public String getText() {
+		return text;
+	}
+}

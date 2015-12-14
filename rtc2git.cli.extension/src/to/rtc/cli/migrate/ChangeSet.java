@@ -1,73 +1,65 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
+import java.util.List;
+
 /**
- * @author florian.buehlmann
+ * Represents a change set
  *
+ * @author florian.buehlmann
+ * @author patrick.reinhart
  */
-public class ChangeSet {
+public interface ChangeSet {
+	/**
+	 * Returns the comment of the change set.
+	 * 
+	 * @return the changeset comment
+	 */
+	public String getComment();
 
-	private final String uuid;
-	private String workItemText;
-	private String entryName;
-	private String creatorName;
-	private String emailAddress;
-	private long creationDate;
+	/**
+	 * Returns the change set creator name.
+	 * 
+	 * @return the creator of the change set
+	 */
+	public String getCreatorName();
 
-	ChangeSet(String changeSetUuid) {
-		uuid = changeSetUuid;
+	/**
+	 * Returns the email address of the change set creator.
+	 * 
+	 * @return the creator email address
+	 */
+	public String getEmailAddress();
+
+	/**
+	 * Returns the change set creation time stamp.
+	 * 
+	 * @return the creation date time stamp
+	 */
+	public long getCreationDate();
+
+	/**
+	 * Returns the list of all work items connected to that change set.
+	 * 
+	 * @return the refered work items
+	 */
+	public List<WorkItem> getWorkItems();
+
+	/**
+	 * Represents a work item reference
+	 */
+	public interface WorkItem {
+		/**
+		 * Returns the unique number of the work item.
+		 * 
+		 * @return the work item number
+		 */
+		public long getNumber();
+
+		/**
+		 * Returns the work item description.
+		 * 
+		 * @return the work description
+		 */
+		public String getText();
 	}
-
-	ChangeSet setWorkItem(String workItemText) {
-		this.workItemText = workItemText;
-		return this;
-	}
-
-	ChangeSet setText(String entryName) {
-		this.entryName = entryName;
-		return this;
-	}
-
-	ChangeSet setCreatorName(String creatorName) {
-		this.creatorName = creatorName;
-		return this;
-	}
-
-	ChangeSet setCreatorEMail(String emailAddress) {
-		this.emailAddress = emailAddress;
-		return this;
-	}
-
-	ChangeSet setCreationDate(long creationDate) {
-		this.creationDate = creationDate;
-		return this;
-	}
-
-	String getUuid() {
-		return uuid;
-	}
-
-	public String getWorkItemText() {
-		return workItemText;
-	}
-
-	public String getComment() {
-		return entryName;
-	}
-
-	public String getCreatorName() {
-		return creatorName;
-	}
-
-	public String getEmailAddress() {
-		return emailAddress;
-	}
-
-	public long getCreationDate() {
-		return creationDate;
-	}
-
 }
