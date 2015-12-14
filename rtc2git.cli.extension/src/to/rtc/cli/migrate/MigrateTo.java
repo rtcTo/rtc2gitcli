@@ -4,11 +4,17 @@
 
 package to.rtc.cli.migrate;
 
-import java.io.File;
+import static java.nio.file.Files.newInputStream;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -84,21 +90,30 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
     // compare workspaces
     ChangeLogEntryDTO changelog = compareWorkspaces(repo, sourceWs, destinationWs);
 
-    File sandboxDirectory;
+    Path sandboxDirectory;
     if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
-      sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
+      sandboxDirectory = Paths.get(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
     } else {
-      sandboxDirectory = new File(System.getProperty("user.dir"));
+      sandboxDirectory = Paths.get(System.getProperty("user.dir"));
     }
-
     try (Migrator migrator = getMigrator()) {
-      migrator.init(sandboxDirectory);
+      migrator.init(sandboxDirectory, readProperties(subargs));
       ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(new ChangeLogStreamOutput(config.getContext().stdout()), config,
-        destinationWs.getName(), getMigrator(), tagMap);
+          destinationWs.getName(), getMigrator(), tagMap);
       visitor.init();
       visitor.acceptInto(changelog);
     }
     config.getContext().stdout().println("Migration took [" + (System.currentTimeMillis() - start) + " ms]");
+  }
+
+  private Properties readProperties(ICommandLine subargs) {
+    Properties props = new Properties();
+    try (InputStream in = newInputStream(Paths.get(subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES)))) {
+      props.load(in);
+    } catch (IOException e) {
+      throw new RuntimeException("Unable to read migration properties", e);
+    }
+    return props;
   }
 
   private Map<String, Tag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {

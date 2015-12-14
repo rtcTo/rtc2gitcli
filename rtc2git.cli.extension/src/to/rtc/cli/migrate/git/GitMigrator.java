@@ -1,11 +1,17 @@
 
 package to.rtc.cli.migrate.git;
 
-import java.io.File;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.readAllLines;
+import static java.nio.file.Files.write;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -16,30 +22,30 @@ import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryBuilder;
 
 import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.Migrator;
 import to.rtc.cli.migrate.Tag;
-import to.rtc.cli.migrate.util.Files;
 
 /**
  * Git implementation of a {@link Migrator}.
  *
  * @author patrick.reinhart
  */
-public class GitMigrator implements Migrator {
-  static final Pattern gitIgnorePattern = Pattern.compile("^.*(/|)\\.gitignore$");
-  static final Pattern jazzIgnorePattern = Pattern.compile("^.*(/|)\\.jazzignore$");
+public final class GitMigrator implements Migrator {
+  static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata");
+  static final Pattern GITIGNORE_PATTERN = Pattern.compile("^.*(/|)\\.gitignore$");
+  static final Pattern JAZZIGNORE_PATTERN = Pattern.compile("^.*(/|)\\.jazzignore$");
 
   private Git git;
+  private Properties properties;
+  private PersonIdent defaultIdent;
 
   private Charset getCharset() {
     return Charset.forName("UTF-8");
   }
 
-  private void addMissing(List<String> values, String... entries) {
+  private void addMissing(List<String> values, List<String> entries) {
     for (String entry : entries) {
       if (!values.contains(entry)) {
         values.add(entry);
@@ -47,12 +53,16 @@ public class GitMigrator implements Migrator {
     }
   }
 
-  private void initRootGitIgnore(File sandboxRootDirectory) throws IOException {
-    File rootGitIgnore = new File(sandboxRootDirectory, ".gitignore");
-    List<String> ignored = Files.readLines(rootGitIgnore, getCharset());
-    addMissing(ignored, "/.jazz5", "/.jazzShed", "/.metadata");
-    Files.writeLines(rootGitIgnore, ignored, getCharset(), false);
-
+  private void initRootGitIgnore(Path sandboxRootDirectory) throws IOException {
+    Path rootGitIgnore = sandboxRootDirectory.resolve(".gitignore");
+    List<String> ignored;
+    if (exists(rootGitIgnore)) {
+      ignored = readAllLines(rootGitIgnore, getCharset());
+      addMissing(ignored, ROOT_IGNORED_ENTRIES);
+    } else {
+      ignored = ROOT_IGNORED_ENTRIES;
+    }
+    write(rootGitIgnore, ignored, getCharset());
   }
 
   private void gitCommit(PersonIdent ident, String comment) {
@@ -78,7 +88,7 @@ public class GitMigrator implements Migrator {
       for (String removed : status.getMissing()) {
         System.out.println("-: " + removed);
         // adds a modified entry to the index
-        if (gitIgnorePattern.matcher(removed).matches()) {
+        if (GITIGNORE_PATTERN.matcher(removed).matches()) {
           // restore .gitignore files that where deleted
           toRestore.add(removed);
         } else {
@@ -127,23 +137,20 @@ public class GitMigrator implements Migrator {
   }
 
   @Override
-  public void init(File sandboxRootDirectory) {
+  public void init(Path sandboxRootDirectory, Properties props) {
+    this.properties = props;
     try {
-      File bareGitDirectory = new File(sandboxRootDirectory, ".git");
-      if (bareGitDirectory.exists()) {
-        RepositoryBuilder repoBuilder = new RepositoryBuilder();
-        repoBuilder.setGitDir(bareGitDirectory);
-        repoBuilder.readEnvironment();
-        repoBuilder.findGitDir();
-        Repository repo = repoBuilder.build();
-        git = new Git(repo);
-      } else if (sandboxRootDirectory.exists()) {
-        git = Git.init().setDirectory(sandboxRootDirectory).call();
+      Path bareGitDirectory = sandboxRootDirectory.resolve(".git");
+      if (exists(bareGitDirectory)) {
+        git = Git.open(sandboxRootDirectory.toFile());
+      } else if (exists(sandboxRootDirectory)) {
+        git = Git.init().setDirectory(sandboxRootDirectory.toFile()).call();
       } else {
-        throw new RuntimeException(bareGitDirectory.getAbsolutePath() + " does not exist");
+        throw new RuntimeException(bareGitDirectory + " does not exist");
       }
+      defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email", "rtc2git@rtc.to"));
       initRootGitIgnore(sandboxRootDirectory);
-      gitCommit(new PersonIdent("Robocop", "john.doe@somewhere.com", System.currentTimeMillis(), 0), "initial commit");
+      gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(), 0), "initial commit");
     } catch (IOException | GitAPIException e) {
       throw new RuntimeException("Unable to initialize GIT repository", e);
     }
@@ -151,7 +158,9 @@ public class GitMigrator implements Migrator {
 
   @Override
   public void close() {
-    git.close();
+    if (git != null) {
+      git.close();
+    }
   }
 
   @Override
