@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -125,6 +126,15 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 			}
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to read migration properties", e);
+		}
+		return trimProperties(props);
+	}
+
+	Properties trimProperties(Properties props) {
+		Set<Object> keyset = props.keySet();
+		for (Object keyObject : keyset) {
+			String key = (String) keyObject;
+			props.setProperty(key, props.getProperty(key).trim());
 		}
 		return props;
 	}
