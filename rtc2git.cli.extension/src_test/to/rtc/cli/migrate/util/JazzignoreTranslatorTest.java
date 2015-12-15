@@ -64,9 +64,7 @@ public class JazzignoreTranslatorTest {
 		lines.add("  {.settings} \\");
 		lines.add("  {bin} \\");
 		lines.add("  {dist} \\");
-		lines.add("  {a?c}");
-		lines.add("");
-		lines.add("");
+		lines.add("  {a?c} \\");
 		return lines;
 	}
 
