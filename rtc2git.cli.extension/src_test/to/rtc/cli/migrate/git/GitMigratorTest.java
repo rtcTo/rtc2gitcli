@@ -1,6 +1,7 @@
 package to.rtc.cli.migrate.git;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -65,11 +66,14 @@ public class GitMigratorTest {
 		props.setProperty("user.email", "john.doe@somewhere.com");
 		props.setProperty("user.name", "John Doe");
 
+		assertFalse(new File(tempFolder.getRoot(), ".gitattributes").exists());
+
 		migrator.init(tempFolder.getRoot(), props);
 
 		checkGit("John Doe", "john.doe@somewhere.com", "Initial commit",
 				new File(tempFolder.getRoot(), ".gitignore"),
 				GitMigrator.ROOT_IGNORED_ENTRIES);
+		assertFalse(new File(tempFolder.getRoot(), ".gitattributes").exists());
 	}
 
 	@Test

@@ -64,7 +64,9 @@ public final class GitMigrator implements Migrator {
 		Charset charset = getCharset();
 		List<String> existingLines = Files.readLines(rootFile, charset);
 		addMissing(existingLines, linesToAdd);
-		Files.writeLines(rootFile, existingLines, charset, false);
+		if (existingLines.size() > 0) {
+			Files.writeLines(rootFile, existingLines, charset, false);
+		}
 	}
 
 	void addMissing(List<String> existing, List<String> adding) {
