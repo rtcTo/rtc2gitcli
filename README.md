@@ -34,3 +34,8 @@ Feel free to report and/or fix [issues](https://github.com/rtcTo/rtc2gitcli/issu
 
 ## Wiki
 For more details [visit our wiki] (https://github.com/rtcTo/rtc2gitcli/wiki)
+
+## links for JGit
+[api docs] (http://download.eclipse.org/jgit/docs/jgit-3.3.0.201403021825-r/apidocs/?d)
+[jgit cookbook] (https://github.com/centic9/jgit-cookbook)
+[User Guide] (http://wiki.eclipse.org/JGit/User_Guide)
