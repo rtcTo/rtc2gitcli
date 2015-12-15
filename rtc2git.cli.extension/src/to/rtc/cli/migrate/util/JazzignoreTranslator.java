@@ -31,6 +31,7 @@ public class JazzignoreTranslator {
 			String lineForRegex = "";
 			boolean needToTransform = false;
 			for (String line : jazzignoreLines) {
+				line = line.trim();
 				if (!line.startsWith("#")) {
 					needToTransform = true;
 					lineForRegex += line;
