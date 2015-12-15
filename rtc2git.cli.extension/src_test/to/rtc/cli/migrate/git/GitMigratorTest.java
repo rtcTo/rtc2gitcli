@@ -1,9 +1,12 @@
 package to.rtc.cli.migrate.git;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,6 +83,20 @@ public class GitMigratorTest {
 		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(
 				tempFolder.getRoot(), ".gitignore"), Arrays.asList("/.jazz5",
 				"/bin/", "/.jazzShed", "/.metadata"));
+	}
+
+	@Test
+	public void testInit_Gitattributes() throws IOException {
+		props.setProperty("gitattributes", "* text=auto");
+
+		migrator.init(tempFolder.getRoot(), props);
+
+		File gitattributes = new File(tempFolder.getRoot(), ".gitattributes");
+		assertTrue(gitattributes.exists() && gitattributes.isFile());
+		List<String> expectedLines = new ArrayList<String>();
+		expectedLines.add("* text=auto");
+		assertEquals(expectedLines,
+				Files.readLines(gitattributes, Charset.forName("UTF-8")));
 	}
 
 	@Test
@@ -173,6 +190,46 @@ public class GitMigratorTest {
 		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch",
 				"the checkin comment", testFile,
 				Collections.singletonList("somevalue"));
+	}
+
+	@Test
+	public void testGetGitattributeLines() throws Exception {
+		props.setProperty("gitattributes",
+				" # handle text files; * text=auto; *.sql text");
+		setMigratorProperties(props);
+		List<String> lines = migrator.getGitattributeLines();
+		assertNotNull(lines);
+		assertEquals(3, lines.size());
+		assertEquals("# handle text files", lines.get(0));
+		assertEquals("* text=auto", lines.get(1));
+		assertEquals("*.sql text", lines.get(2));
+	}
+
+	@Test
+	public void testAddMissing() {
+		List<String> existing = new ArrayList<String>();
+		existing.add("0");
+		existing.add("3");
+		List<String> adding = new ArrayList<String>();
+		adding.add("0");
+		adding.add("1");
+		adding.add("2");
+		adding.add("4");
+		List<String> expectedLines = new ArrayList<String>();
+		expectedLines.add("0");
+		expectedLines.add("3");
+		expectedLines.add("1");
+		expectedLines.add("2");
+		expectedLines.add("4");
+		migrator.addMissing(existing, adding);
+		assertEquals(expectedLines, existing);
+	}
+
+	private void setMigratorProperties(Properties properties) throws Exception {
+		Field field = migrator.getClass().getDeclaredField("properties");
+		assertNotNull("field not found", field);
+		field.setAccessible(true);
+		field.set(migrator, properties);
 	}
 
 	private void checkGit(String userName, String userEmail, String comment,

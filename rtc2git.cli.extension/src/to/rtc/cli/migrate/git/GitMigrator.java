@@ -3,6 +3,7 @@ package to.rtc.cli.migrate.git;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Formatter;
 import java.util.HashSet;
@@ -46,26 +47,51 @@ public final class GitMigrator implements Migrator {
 		return Charset.forName("UTF-8");
 	}
 
-	private void addMissing(List<String> values, List<String> entries) {
-		for (String entry : entries) {
-			if (!values.contains(entry)) {
-				values.add(entry);
-			}
-		}
+	private void initRootGitignore(File sandboxRootDirectory)
+			throws IOException {
+		initRootFile(new File(sandboxRootDirectory, ".gitignore"),
+				ROOT_IGNORED_ENTRIES);
 	}
 
-	private void initRootGitIgnore(File sandboxRootDirectory)
+	private void initRootGitattributes(File sandboxRootDirectory)
 			throws IOException {
-		File rootGitIgnore = new File(sandboxRootDirectory, ".gitignore");
-		List<String> ignored = Files.readLines(rootGitIgnore, getCharset());
-		addMissing(ignored, ROOT_IGNORED_ENTRIES);
-		Files.writeLines(rootGitIgnore, ignored, getCharset(), false);
+		initRootFile(new File(sandboxRootDirectory, ".gitattributes"),
+				getGitattributeLines());
+	}
+
+	private void initRootFile(File rootFile, List<String> linesToAdd)
+			throws IOException {
+		Charset charset = getCharset();
+		List<String> existingLines = Files.readLines(rootFile, charset);
+		addMissing(existingLines, linesToAdd);
+		Files.writeLines(rootFile, existingLines, charset, false);
+	}
+
+	void addMissing(List<String> existing, List<String> adding) {
+		for (String entry : adding) {
+			if (!existing.contains(entry)) {
+				existing.add(entry);
+			}
+		}
 	}
 
 	String getCommitMessage(String workItemText, String comment) {
 		return String.format(
 				properties.getProperty("commit.message.format", "%1s %2s"),
 				workItemText, comment).trim();
+	}
+
+	List<String> getGitattributeLines() {
+		List<String> lines = new ArrayList<String>();
+		String attributesProperty = properties.getProperty("gitattributes", "");
+		if (!attributesProperty.isEmpty()) {
+			String[] splitted = attributesProperty.split(";");
+			int splittedLength = splitted.length;
+			for (int i = 0; i < splittedLength; i++) {
+				lines.add(splitted[i].trim());
+			}
+		}
+		return lines;
 	}
 
 	String getWorkItemNumbers(List<WorkItem> workItems) {
@@ -181,7 +207,8 @@ public final class GitMigrator implements Migrator {
 			defaultIdent = new PersonIdent(props.getProperty("user.name",
 					"RTC 2 git"), props.getProperty("user.email",
 					"rtc2git@rtc.to"));
-			initRootGitIgnore(sandboxRootDirectory);
+			initRootGitignore(sandboxRootDirectory);
+			initRootGitattributes(sandboxRootDirectory);
 			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(),
 					0), "Initial commit");
 		} catch (IOException e) {
