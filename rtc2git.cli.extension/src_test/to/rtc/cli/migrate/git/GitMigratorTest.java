@@ -283,6 +283,41 @@ public class GitMigratorTest {
 		assertFalse(gitignore.exists());
 	}
 
+	@Test
+	public void testRestoreGitignoreIfJazzignoreNotRemoved() throws Exception {
+		migrator.init(basedir, props);
+		File jazzignore = new File(basedir, ".jazzignore");
+		File gitignore = new File(basedir, ".gitignore");
+
+		Files.writeLines(jazzignore, Arrays.asList("core.ignore = {*.suo}",
+				"core.ignore.recursive = {*.class}"), cs, false);
+		migrator.commitChanges(TestChangeSet.INSTANCE);
+
+		assertTrue(gitignore.delete());
+
+		migrator.commitChanges(TestChangeSet.INSTANCE);
+
+		assertTrue(gitignore.exists());
+	}
+
+	@Test
+	public void testRestoreGitignoreIfJazzignoreNotRemovedInSubdirectory() throws Exception {
+		migrator.init(basedir, props);
+		File subdir = tempFolder.newFolder("subdir");
+		File jazzignore = new File(subdir, ".jazzignore");
+		File gitignore = new File(subdir, ".gitignore");
+
+		Files.writeLines(jazzignore, Arrays.asList("core.ignore = {*.suo}",
+				"core.ignore.recursive = {*.class}"), cs, false);
+		migrator.commitChanges(TestChangeSet.INSTANCE);
+
+		assertTrue(gitignore.delete());
+
+		migrator.commitChanges(TestChangeSet.INSTANCE);
+
+		assertTrue(gitignore.exists());
+	}
+
 	private void setMigratorProperties(Properties properties) throws Exception {
 		Field field = migrator.getClass().getDeclaredField("properties");
 		assertNotNull("field not found", field);

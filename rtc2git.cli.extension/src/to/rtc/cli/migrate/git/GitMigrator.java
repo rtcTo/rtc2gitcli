@@ -174,13 +174,19 @@ public final class GitMigrator implements Migrator {
 		Set<String> toRemove = new HashSet<String>();
 		// go over all deleted files
 		for (String removed : status.getMissing()) {
-			// adds a modified entry to the index
-			if (GITIGNORE_PATTERN.matcher(removed).matches()) {
-				// restore .gitignore files that where deleted
-				toRestore.add(removed);
-			} else {
-				toRemove.add(removed);
+			Matcher matcher = GITIGNORE_PATTERN.matcher(removed);
+			if (matcher.matches()) {
+				File jazzignore = new File(rootDir,
+						matcher.group(1).concat(".jazzignore"));
+				if (jazzignore.exists()) {
+					// restore .gitignore files that where deleted if
+					// corresponding .jazzignore exists
+					toRestore.add(removed);
+					continue;
+				}
 			}
+			// adds removed entry to the index
+			toRemove.add(removed);
 		}
 		handleJazzignores(toRemove);
 		return toRemove;
