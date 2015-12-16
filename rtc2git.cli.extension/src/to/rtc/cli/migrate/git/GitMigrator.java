@@ -20,6 +20,7 @@ import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
+import org.eclipse.jgit.lib.StoredConfig;
 
 import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.ChangeSet.WorkItem;
@@ -103,10 +104,10 @@ public final class GitMigrator implements Migrator {
 		if (workItems.isEmpty()) {
 			return "";
 		}
-		final String format = properties
-				.getProperty("rtc.workitem.number.format", "%s");
-		final String delimiter = properties
-				.getProperty("rtc.workitem.number.delimiter", " ");
+		final String format = properties.getProperty(
+				"rtc.workitem.number.format", "%s");
+		final String delimiter = properties.getProperty(
+				"rtc.workitem.number.delimiter", " ");
 		final StringBuilder sb = new StringBuilder();
 		boolean isFirst = true;
 		Formatter formatter = new Formatter(sb);
@@ -176,8 +177,8 @@ public final class GitMigrator implements Migrator {
 		for (String removed : status.getMissing()) {
 			Matcher matcher = GITIGNORE_PATTERN.matcher(removed);
 			if (matcher.matches()) {
-				File jazzignore = new File(rootDir,
-						matcher.group(1).concat(".jazzignore"));
+				File jazzignore = new File(rootDir, matcher.group(1).concat(
+						".jazzignore"));
 				if (jazzignore.exists()) {
 					// restore .gitignore files that where deleted if
 					// corresponding .jazzignore exists
@@ -237,6 +238,12 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
+	private void initConfig() throws IOException {
+		StoredConfig config = git.getRepository().getConfig();
+		config.setBoolean("core", null, "ignoreCase", false);
+		config.save();
+	}
+
 	@Override
 	public void init(File sandboxRootDirectory, Properties props) {
 		this.rootDir = sandboxRootDirectory;
@@ -248,22 +255,20 @@ public final class GitMigrator implements Migrator {
 			} else if (sandboxRootDirectory.exists()) {
 				git = Git.init().setDirectory(sandboxRootDirectory).call();
 			} else {
-				throw new RuntimeException(
-						bareGitDirectory + " does not exist");
+				throw new RuntimeException(bareGitDirectory + " does not exist");
 			}
-			defaultIdent = new PersonIdent(
-					props.getProperty("user.name", "RTC 2 git"),
-					props.getProperty("user.email", "rtc2git@rtc.to"));
+			defaultIdent = new PersonIdent(props.getProperty("user.name",
+					"RTC 2 git"), props.getProperty("user.email",
+					"rtc2git@rtc.to"));
 			initRootGitignore(sandboxRootDirectory);
 			initRootGitattributes(sandboxRootDirectory);
+			initConfig();
 			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(),
 					0), "Initial commit");
 		} catch (IOException e) {
-			throw new RuntimeException("Unable to initialize GIT repository",
-					e);
+			throw new RuntimeException("Unable to initialize GIT repository", e);
 		} catch (GitAPIException e) {
-			throw new RuntimeException("Unable to initialize GIT repository",
-					e);
+			throw new RuntimeException("Unable to initialize GIT repository", e);
 		}
 	}
 
@@ -276,8 +281,10 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void commitChanges(ChangeSet changeset) {
-		gitCommit(new PersonIdent(changeset.getCreatorName(),
-				changeset.getEmailAddress(), changeset.getCreationDate(), 0),
+		gitCommit(
+				new PersonIdent(changeset.getCreatorName(),
+						changeset.getEmailAddress(),
+						changeset.getCreationDate(), 0),
 				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()),
 						changeset.getComment()));
 	}
