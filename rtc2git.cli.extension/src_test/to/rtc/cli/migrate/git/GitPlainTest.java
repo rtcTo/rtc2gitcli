@@ -12,8 +12,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryBuilder;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -37,6 +36,11 @@ public class GitPlainTest {
 		File gitDir = tempFolder.getRoot();
 		Git git = init(gitDir);
 		try {
+			// sample add of a configuration entry
+			StoredConfig config = git.getRepository().getConfig();
+			config.setString("config", null, "ignoreCase", "false");
+			config.save();
+
 			// add all untracked files
 			Status status = git.status().call();
 			Set<String> toAdd = new HashSet<String>();
@@ -65,12 +69,6 @@ public class GitPlainTest {
 					toRemove.add(removed);
 				}
 			}
-
-			// write(gitDir.resolve("testfile"), "abc".getBytes());
-			// toAdd.add("testfile");
-
-			// delete(gitDir.resolve("testfile"));
-			// toRemove.add("testfile");
 
 			// execute the git index commands if needed
 			if (!toAdd.isEmpty()) {
@@ -110,12 +108,7 @@ public class GitPlainTest {
 
 	private Git init(File gitDir) throws Exception {
 		if (gitDir.exists()) {
-			RepositoryBuilder repoBuilder = new RepositoryBuilder();
-			repoBuilder.setGitDir(new File(gitDir, ".git"));
-			repoBuilder.readEnvironment();
-			repoBuilder.findGitDir();
-			Repository repo = repoBuilder.build();
-			return new Git(repo);
+			return Git.open(gitDir);
 		} else {
 			return Git.init().setDirectory(gitDir).call();
 		}
