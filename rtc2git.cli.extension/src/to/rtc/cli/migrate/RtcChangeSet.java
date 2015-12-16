@@ -1,7 +1,3 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
 import java.util.ArrayList;

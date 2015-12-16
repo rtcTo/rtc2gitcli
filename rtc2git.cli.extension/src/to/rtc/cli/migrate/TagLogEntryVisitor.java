@@ -1,7 +1,3 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
 import java.util.HashMap;
@@ -21,7 +17,6 @@ import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 
 /**
  * @author florian.buehlmann
- *
  */
 public class TagLogEntryVisitor extends BaseChangeLogEntryVisitor {
 

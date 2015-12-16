@@ -1,12 +1,7 @@
-/**
- *
- */
-
 package to.rtc.cli.migrate;
 
 /**
  * @author florian.buehlmann
- *
  */
 public class Tag {
 

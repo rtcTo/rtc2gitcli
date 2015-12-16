@@ -1,9 +1,3 @@
-/**
- * File Name: Files.java
- * 
- * Copyright (c) 2015 BISON Schweiz AG, All Rights Reserved.
- */
-
 package to.rtc.cli.migrate.util;
 
 import java.io.BufferedReader;
@@ -21,7 +15,7 @@ import java.util.List;
 /**
  * Reads/writes all lines of a file using the default platform line separator.
  *
- * @author Patrick Reinhart
+ * @author patrick.reinhart
  */
 public class Files {
 

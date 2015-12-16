@@ -36,7 +36,7 @@ public class JazzignoreTranslatorTest {
 		lines.add("# - Each pattern is case sensitive and surrounded by braces ('{' and '}').");
 		lines.add("# - \"*\" matches zero or more characters.");
 		lines.add("# - \"?\" matches a single character.");
-		lines.add("   # - The pattern list may be split across lines by ending the line with a");
+		lines.add("# - The pattern list may be split across lines by ending the line with a");
 		lines.add("#     backslash and starting the next line with a tab.");
 		lines.add("# - Patterns in core.ignore prevent matching resources in the same");
 		lines.add("#     directory from being committed.");
@@ -46,7 +46,7 @@ public class JazzignoreTranslatorTest {
 		lines.add("# - The default value for core.ignore is bin");
 		lines.add("#");
 		lines.add("# To ignore shell scripts and hidden files in this subtree:");
-		lines.add("  #     e.g: core.ignore.recursive = {*.sh} {\\.*}");
+		lines.add("#     e.g: core.ignore.recursive = {*.sh} {\\.*}");
 		lines.add("#");
 		lines.add("# To ignore resources named 'bin' in the current directory (but allow");
 		lines.add("#  them in any sub directorybelow):");
