@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.jgit.api.AddCommand;
@@ -25,6 +26,7 @@ import to.rtc.cli.migrate.ChangeSet.WorkItem;
 import to.rtc.cli.migrate.Migrator;
 import to.rtc.cli.migrate.Tag;
 import to.rtc.cli.migrate.util.Files;
+import to.rtc.cli.migrate.util.JazzignoreTranslator;
 
 /**
  * Git implementation of a {@link Migrator}.
@@ -35,13 +37,14 @@ public final class GitMigrator implements Migrator {
 	static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5",
 			"/.jazzShed", "/.metadata");
 	static final Pattern GITIGNORE_PATTERN = Pattern
-			.compile("^.*(/|)\\.gitignore$");
+			.compile("(^.*(/|))\\.gitignore$");
 	static final Pattern JAZZIGNORE_PATTERN = Pattern
-			.compile("^.*(/|)\\.jazzignore$");
+			.compile("(^.*(/|))\\.jazzignore$");
 
 	private Git git;
 	private Properties properties;
 	private PersonIdent defaultIdent;
+	private File rootDir;
 
 	private Charset getCharset() {
 		return Charset.forName("UTF-8");
@@ -100,10 +103,10 @@ public final class GitMigrator implements Migrator {
 		if (workItems.isEmpty()) {
 			return "";
 		}
-		final String format = properties.getProperty(
-				"rtc.workitem.number.format", "%s");
-		final String delimiter = properties.getProperty(
-				"rtc.workitem.number.delimiter", " ");
+		final String format = properties
+				.getProperty("rtc.workitem.number.format", "%s");
+		final String delimiter = properties
+				.getProperty("rtc.workitem.number.delimiter", " ");
 		final StringBuilder sb = new StringBuilder();
 		boolean isFirst = true;
 		Formatter formatter = new Formatter(sb);
@@ -127,37 +130,10 @@ public final class GitMigrator implements Migrator {
 		try {
 			// add all untracked files
 			Status status = git.status().call();
-			Set<String> toAdd = new HashSet<String>();
-			Set<String> toRemove = new HashSet<String>();
+
+			Set<String> toAdd = handleAdded(status);
 			Set<String> toRestore = new HashSet<String>();
-
-			// go over untracked files
-			for (String untracked : status.getUntracked()) {
-				// add it to the index
-				toAdd.add(untracked);
-			}
-			// go over modified files
-			for (String modified : status.getModified()) {
-				// adds a modified entry to the index
-				toAdd.add(modified);
-			}
-
-			// go over all deleted files
-			for (String removed : status.getMissing()) {
-				// adds a modified entry to the index
-				if (GITIGNORE_PATTERN.matcher(removed).matches()) {
-					// restore .gitignore files that where deleted
-					toRestore.add(removed);
-				} else {
-					toRemove.add(removed);
-				}
-			}
-
-			// write(gitDir.resolve("testfile"), "abc".getBytes());
-			// toAdd.add("testfile");
-
-			// delete(gitDir.resolve("testfile"));
-			// toRemove.add("testfile");
+			Set<String> toRemove = handleRemoved(status, toRestore);
 
 			// execute the git index commands if needed
 			if (!toAdd.isEmpty()) {
@@ -194,8 +170,70 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
+	private Set<String> handleRemoved(Status status, Set<String> toRestore) {
+		Set<String> toRemove = new HashSet<String>();
+		// go over all deleted files
+		for (String removed : status.getMissing()) {
+			// adds a modified entry to the index
+			if (GITIGNORE_PATTERN.matcher(removed).matches()) {
+				// restore .gitignore files that where deleted
+				toRestore.add(removed);
+			} else {
+				toRemove.add(removed);
+			}
+		}
+		handleJazzignores(toRemove);
+		return toRemove;
+	}
+
+	private Set<String> handleAdded(Status status) {
+		Set<String> toAdd = new HashSet<String>();
+		// go over untracked files
+		for (String untracked : status.getUntracked()) {
+			// add it to the index
+			toAdd.add(untracked);
+		}
+		// go over modified files
+		for (String modified : status.getModified()) {
+			// adds a modified entry to the index
+			toAdd.add(modified);
+		}
+		handleJazzignores(toAdd);
+		return toAdd;
+	}
+
+	private void handleJazzignores(Set<String> relativeFileNames) {
+		try {
+			Set<String> additionalNames = new HashSet<String>();
+			for (String relativeFileName : relativeFileNames) {
+				Matcher matcher = JAZZIGNORE_PATTERN.matcher(relativeFileName);
+				if (matcher.matches()) {
+					File jazzIgnore = new File(rootDir, relativeFileName);
+					String gitignoreFile = matcher.group(1)
+							.concat(".gitignore");
+					if (jazzIgnore.exists()) {
+						// change/add case
+						List<String> ignoreContent = JazzignoreTranslator
+								.toGitignore(jazzIgnore);
+						Files.writeLines(new File(rootDir, gitignoreFile),
+								ignoreContent, getCharset(), false);
+					} else {
+						// delete case
+						new File(rootDir, gitignoreFile).delete();
+					}
+					additionalNames.add(gitignoreFile);
+				}
+			}
+			// add additional modified name
+			relativeFileNames.addAll(additionalNames);
+		} catch (IOException e) {
+			throw new RuntimeException("Unable to handle .jazzignore", e);
+		}
+	}
+
 	@Override
 	public void init(File sandboxRootDirectory, Properties props) {
+		this.rootDir = sandboxRootDirectory;
 		this.properties = props;
 		try {
 			File bareGitDirectory = new File(sandboxRootDirectory, ".git");
@@ -204,19 +242,22 @@ public final class GitMigrator implements Migrator {
 			} else if (sandboxRootDirectory.exists()) {
 				git = Git.init().setDirectory(sandboxRootDirectory).call();
 			} else {
-				throw new RuntimeException(bareGitDirectory + " does not exist");
+				throw new RuntimeException(
+						bareGitDirectory + " does not exist");
 			}
-			defaultIdent = new PersonIdent(props.getProperty("user.name",
-					"RTC 2 git"), props.getProperty("user.email",
-					"rtc2git@rtc.to"));
+			defaultIdent = new PersonIdent(
+					props.getProperty("user.name", "RTC 2 git"),
+					props.getProperty("user.email", "rtc2git@rtc.to"));
 			initRootGitignore(sandboxRootDirectory);
 			initRootGitattributes(sandboxRootDirectory);
 			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(),
 					0), "Initial commit");
 		} catch (IOException e) {
-			throw new RuntimeException("Unable to initialize GIT repository", e);
+			throw new RuntimeException("Unable to initialize GIT repository",
+					e);
 		} catch (GitAPIException e) {
-			throw new RuntimeException("Unable to initialize GIT repository", e);
+			throw new RuntimeException("Unable to initialize GIT repository",
+					e);
 		}
 	}
 
@@ -229,10 +270,8 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void commitChanges(ChangeSet changeset) {
-		gitCommit(
-				new PersonIdent(changeset.getCreatorName(),
-						changeset.getEmailAddress(),
-						changeset.getCreationDate(), 0),
+		gitCommit(new PersonIdent(changeset.getCreatorName(),
+				changeset.getEmailAddress(), changeset.getCreationDate(), 0),
 				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()),
 						changeset.getComment()));
 	}

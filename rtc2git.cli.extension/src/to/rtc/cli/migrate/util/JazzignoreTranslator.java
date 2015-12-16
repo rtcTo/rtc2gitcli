@@ -23,7 +23,7 @@ public class JazzignoreTranslator {
 	 * 
 	 * @return the translation, as a list of lines
 	 */
-	static List<String> toGitignore(File jazzignore) {
+	public static List<String> toGitignore(File jazzignore) {
 		List<String> gitignoreLines = new ArrayList<String>();
 		try {
 			List<String> jazzignoreLines = Files.readLines(jazzignore,
