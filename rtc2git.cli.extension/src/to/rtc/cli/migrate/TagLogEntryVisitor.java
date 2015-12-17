@@ -22,14 +22,14 @@ public class TagLogEntryVisitor extends BaseChangeLogEntryVisitor {
 
 	private ChangeLogEntryDTO oldBaseline;
 	private ChangeLogChangeSetEntryDTO oldChangeset;
-	private final Map<String, Tag> tagMap;
+	private final Map<String, RtcTag> tagMap;
 
 	public TagLogEntryVisitor(IChangeLogOutput out) {
-		tagMap = new HashMap<String, Tag>();
+		tagMap = new HashMap<String, RtcTag>();
 		setOutput(out);
 	}
 
-	public Map<String, Tag> acceptInto(ChangeLogEntryDTO root) {
+	public Map<String, RtcTag> acceptInto(ChangeLogEntryDTO root) {
 		if (!enter(root))
 			return tagMap;
 		for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator
@@ -52,7 +52,7 @@ public class TagLogEntryVisitor extends BaseChangeLogEntryVisitor {
 		} else if (!parent.getItemId().equals(oldBaseline.getItemId())) {
 			if ("clentry_baseline".equals(oldBaseline.getEntryType())) {
 				ChangeLogBaselineEntryDTO baseline = (ChangeLogBaselineEntryDTO) oldBaseline;
-				Tag tag = new Tag(baseline.getItemId()).setName(
+				RtcTag tag = new RtcTag(baseline.getItemId()).setName(
 						baseline.getEntryName()).setCreationDate(
 						baseline.getCreationDate());
 				tagMap.put(oldChangeset.getItemId(), tag);

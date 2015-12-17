@@ -28,11 +28,11 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 	private String workspace;
 	private boolean initialLoadDone;
 	private final Migrator migrator;
-	private Map<String, Tag> tagMap;
+	private Map<String, RtcTag> tagMap;
 
 	public ChangeLogEntryVisitor(IChangeLogOutput out,
 			IScmClientConfiguration config, String workspace,
-			Migrator migrator, Map<String, Tag> tagMap) {
+			Migrator migrator, Map<String, RtcTag> tagMap) {
 		initialLoadDone = false;
 		this.config = config;
 		this.workspace = workspace;
@@ -104,7 +104,7 @@ public class ChangeLogEntryVisitor extends BaseChangeLogEntryVisitor {
 	}
 
 	private void handleBaselineChange(ChangeLogChangeSetEntryDTO changeset) {
-		Tag tag = tagMap.get(changeset.getItemId());
+		RtcTag tag = tagMap.get(changeset.getItemId());
 		if (tag != null) {
 			migrator.createTag(tag);
 			acceptAndLoadBaseline(tag.getUuid());

@@ -1,38 +1,23 @@
 package to.rtc.cli.migrate;
 
 /**
+ * Represents a tag.
+ *
  * @author florian.buehlmann
+ * @author patrick.reinhart
  */
-public class Tag {
+public interface Tag {
+	/**
+	 * Returns the actual tag name.
+	 * 
+	 * @return the name of the tag
+	 */
+	public String getName();
 
-	private final String uuid;
-	private String name;
-	private long creationDate;
-
-	Tag(String uuid) {
-		this.uuid = uuid;
-	}
-
-	Tag setCreationDate(long creationDate) {
-		this.creationDate = creationDate;
-		return this;
-	}
-
-	Tag setName(String name) {
-		this.name = name;
-		return this;
-	}
-
-	String getUuid() {
-		return uuid;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public long getCreationDate() {
-		return creationDate;
-	}
-
+	/**
+	 * Returns the tag set creation time stamp.
+	 * 
+	 * @return the creation date time stamp
+	 */
+	public long getCreationDate();
 }

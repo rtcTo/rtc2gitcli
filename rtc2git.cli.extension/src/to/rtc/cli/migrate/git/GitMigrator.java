@@ -32,6 +32,7 @@ import to.rtc.cli.migrate.util.JazzignoreTranslator;
 /**
  * Git implementation of a {@link Migrator}.
  *
+ * @author otmar.humbel
  * @author patrick.reinhart
  */
 public final class GitMigrator implements Migrator {
@@ -167,7 +168,7 @@ public final class GitMigrator implements Migrator {
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new RuntimeException("Unable to commit changes", e);
 		}
 	}
 
@@ -291,6 +292,12 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void createTag(Tag tag) {
-		// not yet implemented
+		try {
+			git.tag().setTagger(defaultIdent).setName(tag.getName()).call();
+		} catch (RuntimeException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to tag", e);
+		}
 	}
 }

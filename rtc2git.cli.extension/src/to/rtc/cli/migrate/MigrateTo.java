@@ -87,7 +87,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 
 		// compare destination workspace with stream of source workspace to get
 		// tagging information
-		Map<String, Tag> tagMap = createTagMap(repo, sourceWs, destinationWs);
+		Map<String, RtcTag> tagMap = createTagMap(repo, sourceWs, destinationWs);
 
 		// compare workspaces
 		ChangeLogEntryDTO changelog = compareWorkspaces(repo, sourceWs,
@@ -139,10 +139,10 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 		return props;
 	}
 
-	private Map<String, Tag> createTagMap(ITeamRepository repo,
+	private Map<String, RtcTag> createTagMap(ITeamRepository repo,
 			IWorkspace sourceWs, IWorkspace destinationWs) {
 		SnapshotSyncReport syncReport;
-		Map<String, Tag> tagMap = new HashMap<String, Tag>();
+		Map<String, RtcTag> tagMap = new HashMap<String, RtcTag>();
 		try {
 			IWorkspaceConnection sourceWsConnection = SCMPlatform
 					.getWorkspaceManager(repo).getWorkspaceConnection(sourceWs,

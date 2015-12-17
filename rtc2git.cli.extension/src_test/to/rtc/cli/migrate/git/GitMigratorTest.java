@@ -18,6 +18,7 @@ import java.util.Properties;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.junit.After;
 import org.junit.Before;
@@ -27,6 +28,7 @@ import org.junit.rules.TemporaryFolder;
 
 import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.ChangeSet.WorkItem;
+import to.rtc.cli.migrate.Tag;
 import to.rtc.cli.migrate.util.Files;
 
 /**
@@ -87,9 +89,9 @@ public class GitMigratorTest {
 
 		migrator.init(basedir, props);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit",
-				new File(basedir, ".gitignore"),
-				Arrays.asList("/.jazz5", "/bin/", "/.jazzShed", "/.metadata"));
+		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(
+				basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/",
+				"/.jazzShed", "/.metadata"));
 	}
 
 	@Test
@@ -111,9 +113,8 @@ public class GitMigratorTest {
 
 		migrator.init(basedir, props);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit",
-				new File(basedir, ".gitignore"),
-				GitMigrator.ROOT_IGNORED_ENTRIES);
+		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(
+				basedir, ".gitignore"), GitMigrator.ROOT_IGNORED_ENTRIES);
 	}
 
 	@Test
@@ -135,8 +136,8 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGetWorkItemNumbers_noWorkItems() {
-		assertEquals("", migrator
-				.getWorkItemNumbers(Collections.<WorkItem> emptyList()));
+		assertEquals("",
+				migrator.getWorkItemNumbers(Collections.<WorkItem> emptyList()));
 	}
 
 	@Test
@@ -301,7 +302,8 @@ public class GitMigratorTest {
 	}
 
 	@Test
-	public void testRestoreGitignoreIfJazzignoreNotRemovedInSubdirectory() throws Exception {
+	public void testRestoreGitignoreIfJazzignoreNotRemovedInSubdirectory()
+			throws Exception {
 		migrator.init(basedir, props);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
@@ -317,6 +319,23 @@ public class GitMigratorTest {
 
 		assertTrue(gitignore.exists());
 	}
+
+	@Test
+	public void testCreateTag() throws Exception {
+		migrator.init(basedir, props);
+
+		migrator.createTag(TestTag.INSTANCE);
+
+		git = Git.open(basedir);
+		List<Ref> tags = git.tagList().call();
+		assertEquals(1, tags.size());
+		Ref ref = tags.get(0);
+		assertEquals("refs/tags/myTag", ref.getName());
+	}
+
+	//
+	// helper stuff
+	//
 
 	private void setMigratorProperties(Properties properties) throws Exception {
 		Field field = migrator.getClass().getDeclaredField("properties");
@@ -398,5 +417,19 @@ public class GitMigratorTest {
 				return "The even more and only";
 			}
 		};
+	}
+
+	private enum TestTag implements Tag {
+		INSTANCE;
+
+		@Override
+		public String getName() {
+			return "myTag";
+		}
+
+		@Override
+		public long getCreationDate() {
+			return 0;
+		}
 	}
 }
