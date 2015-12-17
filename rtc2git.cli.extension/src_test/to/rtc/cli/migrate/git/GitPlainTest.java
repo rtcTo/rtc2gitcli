@@ -12,8 +12,6 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.PersonIdent;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryBuilder;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.junit.Rule;
 import org.junit.Test;
@@ -109,16 +107,8 @@ public class GitPlainTest {
 	}
 
 	private Git init(File gitDir) throws Exception {
-		if (gitDir.exists()) {
-			// open seems not to work ...
-			// return Git.open(gitDir);
-			RepositoryBuilder repoBuilder = new RepositoryBuilder();
-			repoBuilder.setGitDir(new File(gitDir, ".git"));
-			repoBuilder.readEnvironment();
-			repoBuilder.findGitDir();
-			Repository repo = repoBuilder.build();
-			return new Git(repo);
-
+		if (new File(gitDir, ".git").exists()) {
+			return Git.open(gitDir);
 		} else {
 			return Git.init().setDirectory(gitDir).call();
 		}
