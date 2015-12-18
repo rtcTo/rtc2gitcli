@@ -6,4 +6,5 @@
 *.md text
 *.java text
 *.properties text
+*.launch text
 
