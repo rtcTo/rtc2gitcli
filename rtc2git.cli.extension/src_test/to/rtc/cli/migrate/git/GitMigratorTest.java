@@ -87,12 +87,15 @@ public class GitMigratorTest {
 	public void testInit_noGitRepoAvailableWithGitIgnore() throws Exception {
 		Files.writeLines(new File(basedir, ".gitignore"),
 				Arrays.asList("/.jazz5", "/bin/", "/.jazzShed"), cs, false);
+		props.setProperty("global.gitignore.entries",
+				"/projectX/WebContent/node_modules; *.ignored");
 
 		migrator.init(basedir, props);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(
-				basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/",
-				"/.jazzShed", "/.metadata"));
+		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit",
+				new File(basedir, ".gitignore"),
+				Arrays.asList("/.jazz5", "/bin/", "/.jazzShed", "/.metadata",
+						"/projectX/WebContent/node_modules", "*.ignored"));
 	}
 
 	@Test

@@ -65,8 +65,12 @@ public final class GitMigrator implements Migrator {
 
 	private void initRootGitignore(File sandboxRootDirectory)
 			throws IOException {
-		initRootFile(new File(sandboxRootDirectory, ".gitignore"),
+		Set<String> ignoreEntries = new LinkedHashSet<String>(
 				ROOT_IGNORED_ENTRIES);
+		parseElements(properties.getProperty("global.gitignore.entries", ""),
+				ignoreEntries);
+		initRootFile(new File(sandboxRootDirectory, ".gitignore"),
+				ignoreEntries);
 	}
 
 	private void initRootGitattributes(File sandboxRootDirectory)
@@ -75,12 +79,12 @@ public final class GitMigrator implements Migrator {
 				getGitattributeLines());
 	}
 
-	private void initRootFile(File rootFile, List<String> linesToAdd)
+	private void initRootFile(File rootFile, Collection<String> linesToAdd)
 			throws IOException {
 		Charset charset = getCharset();
 		List<String> existingLines = Files.readLines(rootFile, charset);
 		addMissing(existingLines, linesToAdd);
-		if (existingLines.size() > 0) {
+		if (!existingLines.isEmpty()) {
 			Files.writeLines(rootFile, existingLines, charset, false);
 		}
 	}
