@@ -16,9 +16,8 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 @SuppressWarnings("restriction")
 public class LoadCommandDelegate extends RtcCommandDelegate {
 
-	public LoadCommandDelegate(IScmClientConfiguration config,
-			IChangeLogOutput output, String workspace, String component,
-			boolean force) {
+	public LoadCommandDelegate(IScmClientConfiguration config, IChangeLogOutput output, String workspace,
+			String component, boolean force) {
 		super(config, output, "load " + workspace + " force[" + force + "]");
 		setSubCommandLineByReflection(config, workspace, component, force);
 	}
@@ -33,21 +32,16 @@ public class LoadCommandDelegate extends RtcCommandDelegate {
 		return new LoadCmdOptions().getOptions();
 	}
 
-	private void setSubCommandLineByReflection(IScmClientConfiguration config,
-			String workspace, String component, boolean force) {
+	private void setSubCommandLineByReflection(IScmClientConfiguration config, String workspace, String component,
+			boolean force) {
 		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
-		String username = getSubCommandOption(config,
-				CommonOptions.OPT_USERNAME);
-		String password = getSubCommandOption(config,
-				CommonOptions.OPT_PASSWORD);
-		setSubCommandLine(
-				config,
-				generateCommandLine(uri, username, password, workspace,
-						component, force));
+		String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
+		String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
+		setSubCommandLine(config, generateCommandLine(uri, username, password, workspace, component, force));
 	}
 
-	private ICommandLine generateCommandLine(String uri, String username,
-			String password, String workspace, String component, boolean force) {
+	private ICommandLine generateCommandLine(String uri, String username, String password, String workspace,
+			String component, boolean force) {
 		List<String> args = new ArrayList<String>();
 		args.add("-r");
 		args.add(uri);

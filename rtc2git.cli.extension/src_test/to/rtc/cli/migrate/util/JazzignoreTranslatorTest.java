@@ -20,10 +20,8 @@ public class JazzignoreTranslatorTest {
 	@Test
 	public void testToGitignore() throws IOException {
 		File jazzignore = new File(tempFolder.getRoot(), ".jazzignore");
-		Files.writeLines(jazzignore, getJazzignoreLines(),
-				Charset.defaultCharset(), false);
-		List<String> gitignoreLines = JazzignoreTranslator
-				.toGitignore(jazzignore);
+		Files.writeLines(jazzignore, getJazzignoreLines(), Charset.defaultCharset(), false);
+		List<String> gitignoreLines = JazzignoreTranslator.toGitignore(jazzignore);
 		assertEquals(getExpectedGitignoreLines(), gitignoreLines);
 	}
 

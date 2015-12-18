@@ -20,14 +20,10 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 @SuppressWarnings("restriction")
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
-	public AcceptCommandDelegate(IScmClientConfiguration config,
-			IChangeLogOutput output, String targetWorkspace,
-			String changeSetUuid, boolean baseline,
-			boolean acceptMissingChangesets) {
-		super(config, output, "accept " + targetWorkspace + " " + changeSetUuid
-				+ " baseline[" + baseline + "]");
-		setSubCommandLine(targetWorkspace, changeSetUuid, baseline,
-				acceptMissingChangesets);
+	public AcceptCommandDelegate(IScmClientConfiguration config, IChangeLogOutput output, String targetWorkspace,
+			String changeSetUuid, boolean baseline, boolean acceptMissingChangesets) {
+		super(config, output, "accept " + targetWorkspace + " " + changeSetUuid + " baseline[" + baseline + "]");
+		setSubCommandLine(targetWorkspace, changeSetUuid, baseline, acceptMissingChangesets);
 	}
 
 	@Override
@@ -39,23 +35,27 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 			if (status != null) {
 				switch (status.getCode()) {
 				case Constants.STATUS_FAILURE:
-					output.writeLine("There was a [FAILURE]. We ignore that, because the following accepts should fix that");
+					output.writeLine(
+							"There was a [FAILURE]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_FAILURE;
 				case Constants.STATUS_GAP:
-					output.writeLine("There was a [GAP]. We ignore that, because the following accepts should fix that");
+					output.writeLine(
+							"There was a [GAP]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_GAP;
 				case Constants.STATUS_CONFLICT:
-					output.writeLine("There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
+					output.writeLine(
+							"There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_CONFLICT;
 				case Constants.STATUS_NWAY_CONFLICT:
-					output.writeLine("There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
+					output.writeLine(
+							"There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_NWAY_CONFLICT;
 				case Constants.STATUS_WORKSPACE_UNCHANGED:
-					output.writeLine("There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
+					output.writeLine(
+							"There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_WORKSPACE_UNCHANGED;
 				default:
-					output.writeLine("There was an unexpected exception with state ["
-							+ status.getCode() + "]");
+					output.writeLine("There was an unexpected exception with state [" + status.getCode() + "]");
 					break;
 				}
 			}
@@ -73,22 +73,17 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 		return new AcceptCmdOptions().getOptions();
 	}
 
-	void setSubCommandLine(String targetWorkspace, String changeSetUuid,
-			boolean isBaseline, boolean acceptMissingChangesets) {
+	void setSubCommandLine(String targetWorkspace, String changeSetUuid, boolean isBaseline,
+			boolean acceptMissingChangesets) {
 		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
-		String username = getSubCommandOption(config,
-				CommonOptions.OPT_USERNAME);
-		String password = getSubCommandOption(config,
-				CommonOptions.OPT_PASSWORD);
-		setSubCommandLine(
-				config,
-				generateCommandLine(uri, username, password, targetWorkspace,
-						changeSetUuid, isBaseline, acceptMissingChangesets));
+		String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
+		String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
+		setSubCommandLine(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid,
+				isBaseline, acceptMissingChangesets));
 	}
 
-	private ICommandLine generateCommandLine(String uri, String username,
-			String password, String rtcWorkspace, String changeSetUuid,
-			boolean isBaseline, boolean acceptMissingChangesets) {
+	private ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace,
+			String changeSetUuid, boolean isBaseline, boolean acceptMissingChangesets) {
 		List<String> args = new ArrayList<String>();
 		args.add("-o");
 		args.add("--no-merge");

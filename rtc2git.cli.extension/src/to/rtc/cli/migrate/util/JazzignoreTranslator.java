@@ -26,8 +26,11 @@ public class JazzignoreTranslator {
 	public static List<String> toGitignore(File jazzignore) {
 		List<String> gitignoreLines = new ArrayList<String>();
 		try {
-			List<String> jazzignoreLines = Files.readLines(jazzignore,
-					Charset.defaultCharset()); // default should be ok here
+			List<String> jazzignoreLines = Files.readLines(jazzignore, Charset.defaultCharset()); // default
+																									// should
+																									// be
+																									// ok
+																									// here
 			String lineForRegex = "";
 			boolean needToTransform = false;
 			for (String line : jazzignoreLines) {
@@ -46,20 +49,17 @@ public class JazzignoreTranslator {
 				gitignoreLines = addGroupsToList(lineForRegex, gitignoreLines);
 			}
 		} catch (IOException ioe) {
-			throw new RuntimeException("unable to read .jazzignore file "
-					+ jazzignore.getAbsolutePath(), ioe);
+			throw new RuntimeException("unable to read .jazzignore file " + jazzignore.getAbsolutePath(), ioe);
 		}
 		return gitignoreLines;
 	}
 
-	private static List<String> addGroupsToList(String lineToMatch,
-			List<String> ignoreLines) {
+	private static List<String> addGroupsToList(String lineToMatch, List<String> ignoreLines) {
 		Matcher matcher = EXCLUSION.matcher(lineToMatch);
 		while (matcher.find()) {
 			String group = matcher.group();
 			boolean recursive = lineToMatch.startsWith("core.ignore.recursive");
-			ignoreLines.add((!recursive ? "/" : "")
-					+ group.substring(1, group.length() - 1));
+			ignoreLines.add((!recursive ? "/" : "") + group.substring(1, group.length() - 1));
 		}
 		return ignoreLines;
 	}

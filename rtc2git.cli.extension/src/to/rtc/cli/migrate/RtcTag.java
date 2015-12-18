@@ -10,8 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 final class RtcTag implements Tag {
 
-	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("")
-			.setCreationDate(Long.MAX_VALUE);
+	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("").setCreationDate(Long.MAX_VALUE);
 	private final String uuid;
 	private String name;
 	private long creationDate;
@@ -74,14 +73,12 @@ final class RtcTag implements Tag {
 			List<RtcChangeSet> changeSets = entry.getValue();
 			if (index.get() < changeSets.size()) {
 				RtcChangeSet changeSet = changeSets.get(index.get());
-				if (earlyestChangeSet.getCreationDate() > changeSet
-						.getCreationDate()) {
+				if (earlyestChangeSet.getCreationDate() > changeSet.getCreationDate()) {
 					earlyestChangeSet = changeSet;
 				}
 			}
 		}
-		changeSetOrderIndex.get(earlyestChangeSet.getComponent())
-				.incrementAndGet();
+		changeSetOrderIndex.get(earlyestChangeSet.getComponent()).incrementAndGet();
 		return earlyestChangeSet;
 	}
 

@@ -33,13 +33,11 @@ public class Files {
 	 * @throws IOException
 	 *             if the read operation fails
 	 */
-	public static List<String> readLines(File file, Charset cs)
-			throws IOException {
+	public static List<String> readLines(File file, Charset cs) throws IOException {
 		if (file.exists()) {
 			FileInputStream in = new FileInputStream(file);
 			try {
-				BufferedReader br = new BufferedReader(new InputStreamReader(
-						in, cs));
+				BufferedReader br = new BufferedReader(new InputStreamReader(in, cs));
 				List<String> lines = new ArrayList<String>();
 				String line = null;
 				while ((line = br.readLine()) != null) {
@@ -72,8 +70,8 @@ public class Files {
 	 * @throws IOException
 	 *             if the write operation fails
 	 */
-	public static void writeLines(File file, Collection<String> toGlobalIgnore,
-			Charset cs, boolean append) throws IOException {
+	public static void writeLines(File file, Collection<String> toGlobalIgnore, Charset cs, boolean append)
+			throws IOException {
 		FileOutputStream out = new FileOutputStream(file, append);
 		try {
 			PrintWriter pw = new PrintWriter(new OutputStreamWriter(out, cs));

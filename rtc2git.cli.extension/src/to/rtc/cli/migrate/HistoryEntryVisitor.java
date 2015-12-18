@@ -25,8 +25,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	private final Map<String, String> lastChangeSets;
 	private boolean lastChangeSetReached;
 
-	public HistoryEntryVisitor(IChangeLogOutput out,
-			Map<String, String> lastChangeSets) {
+	public HistoryEntryVisitor(IChangeLogOutput out, Map<String, String> lastChangeSets) {
 		tags = new ArrayList<RtcTag>();
 		setOutput(out);
 		this.lastChangeSets = lastChangeSets;
@@ -37,8 +36,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 		if (!enter(root)) {
 			return tags;
 		}
-		for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator
-				.hasNext();) {
+		for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator.hasNext();) {
 			ChangeLogEntryDTO child = (ChangeLogEntryDTO) iterator.next();
 			visitChild(root, child);
 			acceptInto(child);
@@ -49,28 +47,23 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	}
 
 	@Override
-	protected void visitChangeSet(ChangeLogEntryDTO parent,
-			ChangeLogChangeSetEntryDTO changeSetDto) {
+	protected void visitChangeSet(ChangeLogEntryDTO parent, ChangeLogChangeSetEntryDTO changeSetDto) {
 		if (lastChangeSetReached) {
 			return;
 		}
 		String changeSetUuid = changeSetDto.getItemId();
-		RtcChangeSet changeSet = new RtcChangeSet(changeSetUuid)
-				.setText(changeSetDto.getEntryName())
+		RtcChangeSet changeSet = new RtcChangeSet(changeSetUuid).setText(changeSetDto.getEntryName())
 				.setCreatorName(changeSetDto.getCreator().getFullName())
 				.setCreatorEMail(changeSetDto.getCreator().getEmailAddress())
-				.setCreationDate(changeSetDto.getCreationDate())
-				.setComponent(component);
+				.setCreationDate(changeSetDto.getCreationDate()).setComponent(component);
 		@SuppressWarnings("unchecked")
 		List<ChangeLogWorkItemEntryDTO> workItems = changeSetDto.getWorkItems();
 		if (workItems != null && !workItems.isEmpty()) {
 			for (ChangeLogWorkItemEntryDTO workItem : workItems) {
-				changeSet.addWorkItem(workItem.getWorkItemNumber(),
-						workItem.getEntryName());
+				changeSet.addWorkItem(workItem.getWorkItemNumber(), workItem.getEntryName());
 			}
 		}
-		if (actualTag == null
-				|| !actualTag.getName().equals(parent.getEntryName())) {
+		if (actualTag == null || !actualTag.getName().equals(parent.getEntryName())) {
 			actualTag = getTag("HEAD");
 		}
 		addToActualTag(changeSet);
@@ -84,8 +77,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	}
 
 	@Override
-	protected void visitBaseline(ChangeLogEntryDTO parent,
-			ChangeLogBaselineEntryDTO dto) {
+	protected void visitBaseline(ChangeLogEntryDTO parent, ChangeLogBaselineEntryDTO dto) {
 		if (lastChangeSetReached) {
 			return;
 		}
@@ -93,30 +85,25 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	}
 
 	@Override
-	protected void visitComponent(ChangeLogEntryDTO parent,
-			ChangeLogComponentEntryDTO dto) {
+	protected void visitComponent(ChangeLogEntryDTO parent, ChangeLogComponentEntryDTO dto) {
 		component = dto.getEntryName();
 		lastChangeSetReached = false;
 	}
 
 	@Override
-	protected void visitDirection(ChangeLogEntryDTO parent,
-			ChangeLogDirectionEntryDTO dto) {
+	protected void visitDirection(ChangeLogEntryDTO parent, ChangeLogDirectionEntryDTO dto) {
 	}
 
 	@Override
-	protected void visitOslcLink(ChangeLogEntryDTO parent,
-			ChangeLogOslcLinkEntryDTO dto) {
+	protected void visitOslcLink(ChangeLogEntryDTO parent, ChangeLogOslcLinkEntryDTO dto) {
 	}
 
 	@Override
-	protected void visitVersionable(ChangeLogEntryDTO parent,
-			ChangeLogVersionableEntryDTO dto) {
+	protected void visitVersionable(ChangeLogEntryDTO parent, ChangeLogVersionableEntryDTO dto) {
 	}
 
 	@Override
-	protected void visitWorkItem(ChangeLogEntryDTO parent,
-			ChangeLogWorkItemEntryDTO dto, boolean inChangeSet) {
+	protected void visitWorkItem(ChangeLogEntryDTO parent, ChangeLogWorkItemEntryDTO dto, boolean inChangeSet) {
 	}
 
 	private RtcTag getTag(ChangeLogBaselineEntryDTO dto) {
@@ -125,9 +112,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 				return tag;
 			}
 		}
-		RtcTag tag = new RtcTag(dto.getItemId())
-				.setCreationDate(dto.getCreationDate())
-				.setName(dto.getEntryName());
+		RtcTag tag = new RtcTag(dto.getItemId()).setCreationDate(dto.getCreationDate()).setName(dto.getEntryName());
 		tags.add(tag);
 		return tag;
 	}
@@ -138,8 +123,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 				return tag;
 			}
 		}
-		RtcTag tag = new RtcTag(null).setName(name)
-				.setCreationDate(Long.MAX_VALUE);
+		RtcTag tag = new RtcTag(null).setName(name).setCreationDate(Long.MAX_VALUE);
 		tags.add(tag);
 		return tag;
 	}

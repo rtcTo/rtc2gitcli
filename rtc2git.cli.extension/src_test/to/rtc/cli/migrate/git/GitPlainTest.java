@@ -19,17 +19,15 @@ import org.junit.rules.TemporaryFolder;
 
 /**
  * @author patrick.reinhart
- * @see <a
- *      href="https://github.com/centic9/jgit-cookbook">https://github.com/centic9/jgit-cookbook</a>
+ * @see <a href="https://github.com/centic9/jgit-cookbook">https://github.com/
+ *      centic9/jgit-cookbook</a>
  */
 public class GitPlainTest {
 	@Rule
 	public TemporaryFolder tempFolder = new TemporaryFolder();
 
-	static final Pattern gitIgnorePattern = Pattern
-			.compile("^.*(/|)\\.gitignore$");
-	static final Pattern jazzIgnorePattern = Pattern
-			.compile("^.*(/|)\\.jazzignore$");
+	static final Pattern gitIgnorePattern = Pattern.compile("^.*(/|)\\.gitignore$");
+	static final Pattern jazzIgnorePattern = Pattern.compile("^.*(/|)\\.jazzignore$");
 
 	@Test
 	public void plainJGit() throws Exception {
@@ -95,11 +93,9 @@ public class GitPlainTest {
 
 			// execute commit if something has changed
 			if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
-				PersonIdent ident = new PersonIdent("Robocop",
-						"john.doe@somewhere.com", System.currentTimeMillis(),
+				PersonIdent ident = new PersonIdent("Robocop", "john.doe@somewhere.com", System.currentTimeMillis(),
 						(int) TimeUnit.HOURS.toMillis(1));
-				git.commit().setMessage("auto commit").setAuthor(ident)
-						.setCommitter(ident).call();
+				git.commit().setMessage("auto commit").setAuthor(ident).setCommitter(ident).call();
 			}
 		} finally {
 			git.close();

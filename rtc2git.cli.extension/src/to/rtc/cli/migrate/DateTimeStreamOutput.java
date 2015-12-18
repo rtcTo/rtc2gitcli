@@ -7,8 +7,7 @@ import java.util.Date;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogStreamOutput;
 
 public class DateTimeStreamOutput extends ChangeLogStreamOutput {
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
-			"yyyy-MM-dd HH:mm:ss");
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	public DateTimeStreamOutput(PrintStream out) {
 		super(out);

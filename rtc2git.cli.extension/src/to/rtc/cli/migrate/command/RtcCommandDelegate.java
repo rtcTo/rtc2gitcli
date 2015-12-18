@@ -22,8 +22,7 @@ public abstract class RtcCommandDelegate {
 
 	protected final IChangeLogOutput output;
 
-	protected RtcCommandDelegate(IScmClientConfiguration config,
-			IChangeLogOutput output, String commandLine) {
+	protected RtcCommandDelegate(IScmClientConfiguration config, IChangeLogOutput output, String commandLine) {
 		this.config = config;
 		this.output = output;
 		this.commandLine = commandLine;
@@ -35,8 +34,8 @@ public abstract class RtcCommandDelegate {
 		try {
 			return command.run(config);
 		} finally {
-			output.writeLine("DelegateCommand [" + this + "] finished in ["
-					+ (System.currentTimeMillis() - start) + "]ms");
+			output.writeLine(
+					"DelegateCommand [" + this + "] finished in [" + (System.currentTimeMillis() - start) + "]ms");
 		}
 	}
 
@@ -53,13 +52,11 @@ public abstract class RtcCommandDelegate {
 		}
 	}
 
-	protected static String getSubCommandOption(IScmClientConfiguration config,
-			IOptionKey key) {
+	protected static String getSubCommandOption(IScmClientConfiguration config, IOptionKey key) {
 		return config.getSubcommandCommandLine().getOption(key);
 	}
 
-	protected void setSubCommandLine(IScmClientConfiguration config,
-			ICommandLine commandLine) {
+	protected void setSubCommandLine(IScmClientConfiguration config, ICommandLine commandLine) {
 		Class<?> c = ClientConfiguration.class;
 		Field subargs;
 		try {
