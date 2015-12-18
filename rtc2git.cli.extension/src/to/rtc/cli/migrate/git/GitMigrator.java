@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Formatter;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -43,13 +46,21 @@ public final class GitMigrator implements Migrator {
 	static final Pattern JAZZIGNORE_PATTERN = Pattern
 			.compile("(^.*(/|))\\.jazzignore$");
 
+	private final Charset defaultCharset;
+	private final Set<String> ignoredFileExtensions;
+
 	private Git git;
 	private Properties properties;
 	private PersonIdent defaultIdent;
 	private File rootDir;
 
+	public GitMigrator() {
+		defaultCharset = Charset.forName("UTF-8");
+		ignoredFileExtensions = new HashSet<String>();
+	}
+
 	private Charset getCharset() {
-		return Charset.forName("UTF-8");
+		return defaultCharset;
 	}
 
 	private void initRootGitignore(File sandboxRootDirectory)
@@ -74,7 +85,19 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
-	void addMissing(List<String> existing, List<String> adding) {
+	private void parseElements(String elementString,
+			Collection<String> consumer) {
+		if (elementString == null || elementString.isEmpty()) {
+			return;
+		}
+		String[] splitted = elementString.split(";");
+		int splittedLength = splitted.length;
+		for (int i = 0; i < splittedLength; i++) {
+			consumer.add(splitted[i].trim());
+		}
+	}
+
+	void addMissing(Collection<String> existing, Collection<String> adding) {
 		for (String entry : adding) {
 			if (!existing.contains(entry)) {
 				existing.add(entry);
@@ -90,15 +113,12 @@ public final class GitMigrator implements Migrator {
 
 	List<String> getGitattributeLines() {
 		List<String> lines = new ArrayList<String>();
-		String attributesProperty = properties.getProperty("gitattributes", "");
-		if (!attributesProperty.isEmpty()) {
-			String[] splitted = attributesProperty.split(";");
-			int splittedLength = splitted.length;
-			for (int i = 0; i < splittedLength; i++) {
-				lines.add(splitted[i].trim());
-			}
-		}
+		parseElements(properties.getProperty("gitattributes", ""), lines);
 		return lines;
+	}
+
+	Set<String> getIgnoredFileExtensions() {
+		return ignoredFileExtensions;
 	}
 
 	String getWorkItemNumbers(List<WorkItem> workItems) {
@@ -206,6 +226,7 @@ public final class GitMigrator implements Migrator {
 			// adds a modified entry to the index
 			toAdd.add(modified);
 		}
+		handleGlobalFileExtensions(toAdd);
 		handleJazzignores(toAdd);
 		return toAdd;
 	}
@@ -239,16 +260,48 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
+	private void handleGlobalFileExtensions(Set<String> addToGitIndex) {
+		Set<String> gitignoreEntries = new LinkedHashSet<String>();
+		for (String extension : getIgnoredFileExtensions()) {
+			for (Iterator<String> candidateIt = addToGitIndex
+					.iterator(); candidateIt.hasNext();) {
+				String addCandidate = candidateIt.next();
+				if (addCandidate.endsWith(extension)) {
+					gitignoreEntries.add("/".concat(addCandidate));
+					candidateIt.remove();
+				}
+			}
+		}
+		if (!gitignoreEntries.isEmpty()) {
+			try {
+				Files.writeLines(new File(rootDir, ".gitignore"),
+						gitignoreEntries, getCharset(), true);
+				addToGitIndex.add(".gitignore");
+			} catch (IOException e) {
+				throw new RuntimeException("Unable to handle .gitignore", e);
+			}
+		}
+	}
+
 	private void initConfig() throws IOException {
 		StoredConfig config = git.getRepository().getConfig();
 		config.setBoolean("core", null, "ignoreCase", false);
 		config.save();
 	}
 
+	void initialize(Properties props) {
+		properties = props;
+		defaultIdent = new PersonIdent(
+				props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
+		parseElements(props.getProperty("ignore.file.extensions", ""),
+				ignoredFileExtensions);
+	}
+
 	@Override
 	public void init(File sandboxRootDirectory, Properties props) {
-		this.rootDir = sandboxRootDirectory;
-		this.properties = props;
+		rootDir = sandboxRootDirectory;
+		initialize(props);
 		try {
 			File bareGitDirectory = new File(sandboxRootDirectory, ".git");
 			if (bareGitDirectory.exists()) {
@@ -258,9 +311,6 @@ public final class GitMigrator implements Migrator {
 			} else {
 				throw new RuntimeException(bareGitDirectory + " does not exist");
 			}
-			defaultIdent = new PersonIdent(props.getProperty("user.name",
-					"RTC 2 git"), props.getProperty("user.email",
-					"rtc2git@rtc.to"));
 			initRootGitignore(sandboxRootDirectory);
 			initRootGitattributes(sandboxRootDirectory);
 			initConfig();
@@ -282,10 +332,8 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void commitChanges(ChangeSet changeset) {
-		gitCommit(
-				new PersonIdent(changeset.getCreatorName(),
-						changeset.getEmailAddress(),
-						changeset.getCreationDate(), 0),
+		gitCommit(new PersonIdent(changeset.getCreatorName(),
+				changeset.getEmailAddress(), changeset.getCreationDate(), 0),
 				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()),
 						changeset.getComment()));
 	}

@@ -10,6 +10,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -61,7 +62,7 @@ public class Files {
 	 * 
 	 * @param file
 	 *            the file being written/appended
-	 * @param lines
+	 * @param toGlobalIgnore
 	 *            the lines to be written without any line separators
 	 * @param cs
 	 *            the character set used for writing
@@ -71,13 +72,13 @@ public class Files {
 	 * @throws IOException
 	 *             if the write operation fails
 	 */
-	public static void writeLines(File file, List<String> lines, Charset cs,
-			boolean append) throws IOException {
+	public static void writeLines(File file, Collection<String> toGlobalIgnore,
+			Charset cs, boolean append) throws IOException {
 		FileOutputStream out = new FileOutputStream(file, append);
 		try {
 			PrintWriter pw = new PrintWriter(new OutputStreamWriter(out, cs));
 			try {
-				for (String line : lines) {
+				for (String line : toGlobalIgnore) {
 					pw.append(line).println();
 				}
 			} finally {

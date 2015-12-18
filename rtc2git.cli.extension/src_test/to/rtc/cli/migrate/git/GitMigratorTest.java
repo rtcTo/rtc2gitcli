@@ -7,14 +7,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
@@ -203,13 +204,26 @@ public class GitMigratorTest {
 	public void testGetGitattributeLines() throws Exception {
 		props.setProperty("gitattributes",
 				" # handle text files; * text=auto; *.sql text");
-		setMigratorProperties(props);
+		migrator.initialize(props);
+
 		List<String> lines = migrator.getGitattributeLines();
 		assertNotNull(lines);
 		assertEquals(3, lines.size());
 		assertEquals("# handle text files", lines.get(0));
 		assertEquals("* text=auto", lines.get(1));
 		assertEquals("*.sql text", lines.get(2));
+	}
+
+	@Test
+	public void testGetIgnoredFileExtensions() throws Exception {
+		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dll");
+		migrator.initialize(props);
+
+		Set<String> ignoredExtensions = migrator.getIgnoredFileExtensions();
+		HashSet<String> expected = new HashSet<String>(
+				Arrays.asList(".zip", ".jar", ".exe", ".dll"));
+
+		assertEquals(expected, ignoredExtensions);
 	}
 
 	@Test
@@ -321,6 +335,24 @@ public class GitMigratorTest {
 	}
 
 	@Test
+	public void testGlobalIgnoredFilesAddedToRootGitIgnore() throws Exception {
+		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dll");
+		migrator.init(basedir, props);
+
+		create(new File(basedir, "some.zip"));
+		create(new File(basedir, "subdir/some.jar"));
+		create(new File(basedir, "subdir/subsub/some.dll"));
+
+		migrator.commitChanges(TestChangeSet.INSTANCE);
+
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch",
+				"4711 the checkin comment", new File(basedir, ".gitignore"),
+				Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
+						"/subdir/subsub/some.dll", "/subdir/some.jar",
+						"/some.zip"));
+	}
+
+	@Test
 	public void testCreateTag() throws Exception {
 		migrator.init(basedir, props);
 
@@ -337,11 +369,9 @@ public class GitMigratorTest {
 	// helper stuff
 	//
 
-	private void setMigratorProperties(Properties properties) throws Exception {
-		Field field = migrator.getClass().getDeclaredField("properties");
-		assertNotNull("field not found", field);
-		field.setAccessible(true);
-		field.set(migrator, properties);
+	private void create(File file) throws Exception {
+		file.getParentFile().mkdirs();
+		file.createNewFile();
 	}
 
 	private void checkGit(String userName, String userEmail, String comment,
