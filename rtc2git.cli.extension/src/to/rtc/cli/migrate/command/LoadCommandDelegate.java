@@ -1,4 +1,3 @@
-
 package to.rtc.cli.migrate.command;
 
 import java.util.ArrayList;
@@ -16,41 +15,47 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 @SuppressWarnings("restriction")
 public class LoadCommandDelegate extends RtcCommandDelegate {
 
-  public LoadCommandDelegate(IScmClientConfiguration config, String workspace, boolean force) {
-    super(config, "load " + workspace + " force[" + force + "]");
-    setSubCommandLineByReflection(config, workspace, force);
-  }
+	public LoadCommandDelegate(IScmClientConfiguration config,
+			String workspace, boolean force) {
+		super(config, "load " + workspace + " force[" + force + "]");
+		setSubCommandLineByReflection(config, workspace, force);
+	}
 
-  @Override
-  AbstractSubcommand getCommand() {
-    return new LoadCmdLauncher();
-  }
+	@Override
+	AbstractSubcommand getCommand() {
+		return new LoadCmdLauncher();
+	}
 
-  @Override
-  Options getOptions() throws ConflictingOptionException {
-    return new LoadCmdOptions().getOptions();
-  }
+	@Override
+	Options getOptions() throws ConflictingOptionException {
+		return new LoadCmdOptions().getOptions();
+	}
 
-  private void setSubCommandLineByReflection(IScmClientConfiguration config, String workspace, boolean force) {
-    String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
-    String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
-    String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
-    setSubCommandLine(config, generateCommandLine(uri, username, password, workspace, force));
-  }
+	private void setSubCommandLineByReflection(IScmClientConfiguration config,
+			String workspace, boolean force) {
+		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
+		String username = getSubCommandOption(config,
+				CommonOptions.OPT_USERNAME);
+		String password = getSubCommandOption(config,
+				CommonOptions.OPT_PASSWORD);
+		setSubCommandLine(config,
+				generateCommandLine(uri, username, password, workspace, force));
+	}
 
-  private ICommandLine generateCommandLine(String uri, String username, String password, String workspace, boolean force) {
-    List<String> args = new ArrayList<String>();
-    args.add("-r");
-    args.add(uri);
-    args.add("-u");
-    args.add(username);
-    args.add("-P");
-    args.add(password);
-    args.add(workspace);
+	private ICommandLine generateCommandLine(String uri, String username,
+			String password, String workspace, boolean force) {
+		List<String> args = new ArrayList<String>();
+		args.add("-r");
+		args.add(uri);
+		args.add("-u");
+		args.add(username);
+		args.add("-P");
+		args.add(password);
+		args.add(workspace);
 
-    if (force) {
-      args.add("--force");
-    }
-    return generateCommandLine(args);
-  }
+		if (force) {
+			args.add("--force");
+		}
+		return generateCommandLine(args);
+	}
 }
