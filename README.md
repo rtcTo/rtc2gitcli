@@ -30,6 +30,9 @@ It is implemented as scm cli plugin.
 ## Contribute
 We welcome any feedback! :)
 
+### Eclipse prerequirements
+In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` file prior importing the actual `rtc2git.cli.extension` project.
+
 Feel free to report and/or fix [issues](https://github.com/rtcTo/rtc2gitcli/issues) or create new pull requests
 
 ## Wiki

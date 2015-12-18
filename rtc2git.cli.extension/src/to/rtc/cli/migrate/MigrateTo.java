@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,25 +32,25 @@ import com.ibm.team.filesystem.rcp.core.internal.changelog.GenerateChangeLogOper
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.CopyFileAreaPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.FallbackPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.SnapshotPathResolver;
+import com.ibm.team.repository.client.IItemManager;
 import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.TeamRepositoryException;
+import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.ISubcommand;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.scm.client.IWorkspaceConnection;
+import com.ibm.team.scm.client.IWorkspaceManager;
 import com.ibm.team.scm.client.SCMPlatform;
+import com.ibm.team.scm.client.internal.ClientChangeSetEntry;
+import com.ibm.team.scm.common.IChangeSetHandle;
+import com.ibm.team.scm.common.IComponent;
+import com.ibm.team.scm.common.IComponentHandle;
 import com.ibm.team.scm.common.IWorkspace;
 import com.ibm.team.scm.common.IWorkspaceHandle;
 
-/**
- * @author florian.buehlmann
- */
 @SuppressWarnings("restriction")
-public abstract class MigrateTo extends AbstractSubcommand implements
-		ISubcommand {
+public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
-	/**
-	 * @return
-	 */
 	private IProgressMonitor getMonitor() {
 		return new NullProgressMonitor();
 	}
@@ -62,63 +63,83 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 
 		// Consume the command-line
 		ICommandLine subargs = config.getSubcommandCommandLine();
+		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
 
 		final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS),
-						config);
+				.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
 		SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
 		final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS),
-						config);
-		SubcommandUtil
-				.validateArgument(destinationWsOption, ItemType.WORKSPACE);
+				.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+		SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
 		// Initialize connection to RTC
 		IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
-		ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client,
-				destinationWsOption);
+		ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
 		repo.setConnectionTimeout(3600);
 
-		IWorkspace sourceWs = RepoUtil.getWorkspace(
-				sourceWsOption.getItemSelector(), true, false, repo, config);
-		IWorkspace destinationWs = RepoUtil.getWorkspace(
-				destinationWsOption.getItemSelector(), true, false, repo,
+		IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
+		IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
 				config);
 
 		// compare destination workspace with stream of source workspace to get
 		// tagging information
-		Map<String, RtcTag> tagMap = createTagMap(repo, sourceWs, destinationWs);
+		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
+		Collections.sort(tags, new TagCreationDateComparator());
 
-		// compare workspaces
-		ChangeLogEntryDTO changelog = compareWorkspaces(repo, sourceWs,
-				destinationWs);
-
-		File sandboxDirectory;
+		final File sandboxDirectory;
 		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
-			sandboxDirectory = new File(
-					subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
+			sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
 		} else {
 			sandboxDirectory = new File(System.getProperty("user.dir"));
 		}
 		Migrator migrator = getMigrator();
 		migrator.init(sandboxDirectory, readProperties(subargs));
-		ChangeLogEntryVisitor visitor = new ChangeLogEntryVisitor(
-				new ChangeLogStreamOutput(config.getContext().stdout()),
-				config, destinationWs.getName(), migrator, tagMap);
-		visitor.init();
-		visitor.acceptInto(changelog);
-		config.getContext()
-				.stdout()
-				.println(
-						"Migration took ["
-								+ (System.currentTimeMillis() - start) + " ms]");
+
+		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+		for (RtcTag tag : tags) {
+			final long startTag = System.currentTimeMillis();
+			output.writeLine("Start migration of Tag [" + tag.getName() + "]");
+			try {
+				rtcMigrator.migrateTag(tag);
+			} catch (CLIClientException e) {
+				e.printStackTrace();
+				throw new RuntimeException(e);
+			}
+			output.writeLine("Migration of tag [" + tag.getName() + "] took ["
+					+ (System.currentTimeMillis() - startTag) / 1000 + "] s");
+		}
+		output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
+	}
+
+	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
+		IWorkspaceConnection sourceWsConnection;
+		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+		IItemManager itemManager = repo.itemManager();
+		Map<String, String> lastChangeSets = new HashMap<String, String>();
+		try {
+			sourceWsConnection = workspaceManager.getWorkspaceConnection(sourceWs, getMonitor());
+			@SuppressWarnings("unchecked")
+			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+			@SuppressWarnings("unchecked")
+			List<IComponent> components = itemManager.fetchCompleteItems(componentHandles, componentHandles.size(),
+					getMonitor());
+			for (IComponent component : components) {
+				@SuppressWarnings("unchecked")
+				List<ClientChangeSetEntry> changeSets = sourceWsConnection.changeHistory(component)
+						.recent(getMonitor());
+				IChangeSetHandle changeSetHandle = changeSets.get(changeSets.size() - 1).changeSet();
+				lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
+			}
+		} catch (TeamRepositoryException e) {
+			e.printStackTrace();
+		}
+		return lastChangeSets;
 	}
 
 	private Properties readProperties(ICommandLine subargs) {
 		final Properties props = new Properties();
 		try {
-			FileInputStream in = new FileInputStream(
-					subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES));
+			FileInputStream in = new FileInputStream(subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES));
 			try {
 				props.load(in);
 			} finally {
@@ -139,25 +160,23 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 		return props;
 	}
 
-	private Map<String, RtcTag> createTagMap(ITeamRepository repo,
-			IWorkspace sourceWs, IWorkspace destinationWs) {
+	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
+
 		SnapshotSyncReport syncReport;
-		Map<String, RtcTag> tagMap = new HashMap<String, RtcTag>();
+		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform
-					.getWorkspaceManager(repo).getWorkspaceConnection(sourceWs,
-							getMonitor());
+			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo)
+					.getWorkspaceConnection(sourceWs, getMonitor());
 
-			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection
-					.getFlowTable().getCurrentAcceptFlow().getFlowNode());
-			SnapshotId sourceSnapshotId = SnapshotId
-					.getSnapshotId(sourceStreamHandle);
-			SnapshotId destinationSnapshotId = SnapshotId
-					.getSnapshotId(destinationWs.getItemHandle());
+			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
+					.getCurrentAcceptFlow().getFlowNode());
+			SnapshotId sourceSnapshotId = SnapshotId.getSnapshotId(sourceStreamHandle);
+			SnapshotId destinationSnapshotId = SnapshotId.getSnapshotId(destinationWs.getItemHandle());
 
-			syncReport = SnapshotSyncReport.compare(
-					destinationSnapshotId.getSnapshot(null),
-					sourceSnapshotId.getSnapshot(null), null, null);
+			@SuppressWarnings("unchecked")
+			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+			syncReport = SnapshotSyncReport.compare(destinationSnapshotId.getSnapshot(null),
+					sourceSnapshotId.getSnapshot(null), componentHandles, getMonitor());
 			GenerateChangeLogOperation clOp = new GenerateChangeLogOperation();
 			ChangeLogCustomizer customizer = new ChangeLogCustomizer();
 
@@ -167,14 +186,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 			List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
 			pathResolvers.add(CopyFileAreaPathResolver.create());
 			pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
-			pathResolvers.add(SnapshotPathResolver
-					.create(destinationSnapshotId));
-			IPathResolver pathResolver = new FallbackPathResolver(
-					pathResolvers, true);
+			pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
+			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
 			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
-			TagLogEntryVisitor visitor = new TagLogEntryVisitor(
-					new ChangeLogStreamOutput(config.getContext().stdout()));
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(
+					new ChangeLogStreamOutput(config.getContext().stdout()), getLastChangeSetUuids(repo, sourceWs));
 
 			tagMap = visitor.acceptInto(changelog);
 
@@ -182,37 +199,5 @@ public abstract class MigrateTo extends AbstractSubcommand implements
 			e.printStackTrace();
 		}
 		return tagMap;
-	}
-
-	private ChangeLogEntryDTO compareWorkspaces(ITeamRepository repo,
-			IWorkspace sourceWs, IWorkspace destinationWs) {
-		SnapshotSyncReport syncReport;
-		try {
-			SnapshotId sourceSnapshotId = SnapshotId.getSnapshotId(sourceWs
-					.getItemHandle());
-			SnapshotId destinationSnapshotId = SnapshotId
-					.getSnapshotId(destinationWs.getItemHandle());
-			syncReport = SnapshotSyncReport.compare(
-					destinationSnapshotId.getSnapshot(null),
-					sourceSnapshotId.getSnapshot(null), null, null);
-			GenerateChangeLogOperation clOp = new GenerateChangeLogOperation();
-			ChangeLogCustomizer customizer = new ChangeLogCustomizer();
-
-			customizer.setFlowsToInclude(FlowType.Incoming);
-			customizer.setIncludeBaselines(true);
-
-			List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
-			pathResolvers.add(CopyFileAreaPathResolver.create());
-			pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
-			pathResolvers.add(SnapshotPathResolver
-					.create(destinationSnapshotId));
-			IPathResolver pathResolver = new FallbackPathResolver(
-					pathResolvers, true);
-			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
-			return clOp.run(getMonitor());
-		} catch (TeamRepositoryException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 }

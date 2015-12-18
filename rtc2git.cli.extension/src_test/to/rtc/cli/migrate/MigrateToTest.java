@@ -44,8 +44,7 @@ public class MigrateToTest {
 		return Charset.forName("ISO-8859-1");
 	}
 
-	private Properties prepareUntrimmedProperties(List<String> lines)
-			throws Exception {
+	private Properties prepareUntrimmedProperties(List<String> lines) throws Exception {
 		File file = new File(tempFolder.getRoot(), "untrimmed.properties");
 		Files.writeLines(file, lines, getPropertyCharset(), false);
 		Properties untrimmed = new Properties();

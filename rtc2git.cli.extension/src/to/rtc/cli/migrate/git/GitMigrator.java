@@ -5,11 +5,16 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Formatter;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,45 +41,58 @@ import to.rtc.cli.migrate.util.JazzignoreTranslator;
  * @author patrick.reinhart
  */
 public final class GitMigrator implements Migrator {
-	static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5",
-			"/.jazzShed", "/.metadata");
-	static final Pattern GITIGNORE_PATTERN = Pattern
-			.compile("(^.*(/|))\\.gitignore$");
-	static final Pattern JAZZIGNORE_PATTERN = Pattern
-			.compile("(^.*(/|))\\.jazzignore$");
+	static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata");
+	static final Pattern GITIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.gitignore$");
+	static final Pattern JAZZIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.jazzignore$");
+
+	private final Charset defaultCharset;
+	private final Set<String> ignoredFileExtensions;
 
 	private Git git;
 	private Properties properties;
 	private PersonIdent defaultIdent;
 	private File rootDir;
 
+	public GitMigrator() {
+		defaultCharset = Charset.forName("UTF-8");
+		ignoredFileExtensions = new HashSet<String>();
+	}
+
 	private Charset getCharset() {
-		return Charset.forName("UTF-8");
+		return defaultCharset;
 	}
 
-	private void initRootGitignore(File sandboxRootDirectory)
-			throws IOException {
-		initRootFile(new File(sandboxRootDirectory, ".gitignore"),
-				ROOT_IGNORED_ENTRIES);
+	private void initRootGitignore(File sandboxRootDirectory) throws IOException {
+		Set<String> ignoreEntries = new LinkedHashSet<String>(ROOT_IGNORED_ENTRIES);
+		parseElements(properties.getProperty("global.gitignore.entries", ""), ignoreEntries);
+		initRootFile(new File(sandboxRootDirectory, ".gitignore"), ignoreEntries);
 	}
 
-	private void initRootGitattributes(File sandboxRootDirectory)
-			throws IOException {
-		initRootFile(new File(sandboxRootDirectory, ".gitattributes"),
-				getGitattributeLines());
+	private void initRootGitattributes(File sandboxRootDirectory) throws IOException {
+		initRootFile(new File(sandboxRootDirectory, ".gitattributes"), getGitattributeLines());
 	}
 
-	private void initRootFile(File rootFile, List<String> linesToAdd)
-			throws IOException {
+	private void initRootFile(File rootFile, Collection<String> linesToAdd) throws IOException {
 		Charset charset = getCharset();
 		List<String> existingLines = Files.readLines(rootFile, charset);
 		addMissing(existingLines, linesToAdd);
-		if (existingLines.size() > 0) {
+		if (!existingLines.isEmpty()) {
 			Files.writeLines(rootFile, existingLines, charset, false);
 		}
 	}
 
-	void addMissing(List<String> existing, List<String> adding) {
+	private void parseElements(String elementString, Collection<String> consumer) {
+		if (elementString == null || elementString.isEmpty()) {
+			return;
+		}
+		String[] splitted = elementString.split(";");
+		int splittedLength = splitted.length;
+		for (int i = 0; i < splittedLength; i++) {
+			consumer.add(splitted[i].trim());
+		}
+	}
+
+	void addMissing(Collection<String> existing, Collection<String> adding) {
 		for (String entry : adding) {
 			if (!existing.contains(entry)) {
 				existing.add(entry);
@@ -83,32 +101,25 @@ public final class GitMigrator implements Migrator {
 	}
 
 	String getCommitMessage(String workItemText, String comment) {
-		return String.format(
-				properties.getProperty("commit.message.format", "%1s %2s"),
-				workItemText, comment).trim();
+		return String.format(properties.getProperty("commit.message.format", "%1s %2s"), workItemText, comment).trim();
 	}
 
 	List<String> getGitattributeLines() {
 		List<String> lines = new ArrayList<String>();
-		String attributesProperty = properties.getProperty("gitattributes", "");
-		if (!attributesProperty.isEmpty()) {
-			String[] splitted = attributesProperty.split(";");
-			int splittedLength = splitted.length;
-			for (int i = 0; i < splittedLength; i++) {
-				lines.add(splitted[i].trim());
-			}
-		}
+		parseElements(properties.getProperty("gitattributes", ""), lines);
 		return lines;
+	}
+
+	Set<String> getIgnoredFileExtensions() {
+		return ignoredFileExtensions;
 	}
 
 	String getWorkItemNumbers(List<WorkItem> workItems) {
 		if (workItems.isEmpty()) {
 			return "";
 		}
-		final String format = properties.getProperty(
-				"rtc.workitem.number.format", "%s");
-		final String delimiter = properties.getProperty(
-				"rtc.workitem.number.delimiter", " ");
+		final String format = properties.getProperty("rtc.workitem.number.format", "%s");
+		final String delimiter = properties.getProperty("rtc.workitem.number.delimiter", " ");
 		final StringBuilder sb = new StringBuilder();
 		boolean isFirst = true;
 		Formatter formatter = new Formatter(sb);
@@ -126,6 +137,23 @@ public final class GitMigrator implements Migrator {
 			formatter.close();
 		}
 		return sb.toString();
+	}
+
+	SortedSet<String> getExistingIgnoredFiles() {
+		try {
+			TreeSet<String> exstingIgnoredFiles = new TreeSet<String>();
+			for (String ignoredFile : Files.readLines(new File(rootDir, ".gitignore"), getCharset())) {
+				if (ignoredFile.startsWith("/")) {
+					File ignored = new File(rootDir, ignoredFile.substring(1));
+					if (ignored.exists() && ignored.isFile()) {
+						exstingIgnoredFiles.add(ignoredFile);
+					}
+				}
+			}
+			return exstingIgnoredFiles;
+		} catch (IOException e) {
+			throw new RuntimeException("To process .gitignore", e);
+		}
 	}
 
 	private void gitCommit(PersonIdent ident, String comment) {
@@ -162,8 +190,7 @@ public final class GitMigrator implements Migrator {
 
 			// execute commit if something has changed
 			if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
-				git.commit().setMessage(comment).setAuthor(ident)
-						.setCommitter(ident).call();
+				git.commit().setMessage(comment).setAuthor(ident).setCommitter(ident).call();
 			}
 		} catch (RuntimeException e) {
 			throw e;
@@ -178,8 +205,7 @@ public final class GitMigrator implements Migrator {
 		for (String removed : status.getMissing()) {
 			Matcher matcher = GITIGNORE_PATTERN.matcher(removed);
 			if (matcher.matches()) {
-				File jazzignore = new File(rootDir, matcher.group(1).concat(
-						".jazzignore"));
+				File jazzignore = new File(rootDir, matcher.group(1).concat(".jazzignore"));
 				if (jazzignore.exists()) {
 					// restore .gitignore files that where deleted if
 					// corresponding .jazzignore exists
@@ -206,6 +232,7 @@ public final class GitMigrator implements Migrator {
 			// adds a modified entry to the index
 			toAdd.add(modified);
 		}
+		handleGlobalFileExtensions(toAdd);
 		handleJazzignores(toAdd);
 		return toAdd;
 	}
@@ -217,14 +244,11 @@ public final class GitMigrator implements Migrator {
 				Matcher matcher = JAZZIGNORE_PATTERN.matcher(relativeFileName);
 				if (matcher.matches()) {
 					File jazzIgnore = new File(rootDir, relativeFileName);
-					String gitignoreFile = matcher.group(1)
-							.concat(".gitignore");
+					String gitignoreFile = matcher.group(1).concat(".gitignore");
 					if (jazzIgnore.exists()) {
 						// change/add case
-						List<String> ignoreContent = JazzignoreTranslator
-								.toGitignore(jazzIgnore);
-						Files.writeLines(new File(rootDir, gitignoreFile),
-								ignoreContent, getCharset(), false);
+						List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
+						Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
 					} else {
 						// delete case
 						new File(rootDir, gitignoreFile).delete();
@@ -239,16 +263,44 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
+	private void handleGlobalFileExtensions(Set<String> addToGitIndex) {
+		Set<String> gitignoreEntries = new LinkedHashSet<String>();
+		for (String extension : getIgnoredFileExtensions()) {
+			for (Iterator<String> candidateIt = addToGitIndex.iterator(); candidateIt.hasNext();) {
+				String addCandidate = candidateIt.next();
+				if (addCandidate.endsWith(extension)) {
+					gitignoreEntries.add("/".concat(addCandidate));
+					candidateIt.remove();
+				}
+			}
+		}
+		if (!gitignoreEntries.isEmpty()) {
+			try {
+				Files.writeLines(new File(rootDir, ".gitignore"), gitignoreEntries, getCharset(), true);
+				addToGitIndex.add(".gitignore");
+			} catch (IOException e) {
+				throw new RuntimeException("Unable to handle .gitignore", e);
+			}
+		}
+	}
+
 	private void initConfig() throws IOException {
 		StoredConfig config = git.getRepository().getConfig();
 		config.setBoolean("core", null, "ignoreCase", false);
 		config.save();
 	}
 
+	void initialize(Properties props) {
+		properties = props;
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
+		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
+	}
+
 	@Override
 	public void init(File sandboxRootDirectory, Properties props) {
-		this.rootDir = sandboxRootDirectory;
-		this.properties = props;
+		rootDir = sandboxRootDirectory;
+		initialize(props);
 		try {
 			File bareGitDirectory = new File(sandboxRootDirectory, ".git");
 			if (bareGitDirectory.exists()) {
@@ -258,14 +310,10 @@ public final class GitMigrator implements Migrator {
 			} else {
 				throw new RuntimeException(bareGitDirectory + " does not exist");
 			}
-			defaultIdent = new PersonIdent(props.getProperty("user.name",
-					"RTC 2 git"), props.getProperty("user.email",
-					"rtc2git@rtc.to"));
 			initRootGitignore(sandboxRootDirectory);
 			initRootGitattributes(sandboxRootDirectory);
 			initConfig();
-			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(),
-					0), "Initial commit");
+			gitCommit(new PersonIdent(defaultIdent, System.currentTimeMillis(), 0), "Initial commit");
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to initialize GIT repository", e);
 		} catch (GitAPIException e) {
@@ -278,16 +326,19 @@ public final class GitMigrator implements Migrator {
 		if (git != null) {
 			git.close();
 		}
+		SortedSet<String> existingIgnoredFiles = getExistingIgnoredFiles();
+		if (!existingIgnoredFiles.isEmpty()) {
+			System.err.println("Some ignored files still exist in the sandbox:");
+			for (String existingIgnoredEntry : existingIgnoredFiles) {
+				System.err.println(existingIgnoredEntry);
+			}
+		}
 	}
 
 	@Override
 	public void commitChanges(ChangeSet changeset) {
-		gitCommit(
-				new PersonIdent(changeset.getCreatorName(),
-						changeset.getEmailAddress(),
-						changeset.getCreationDate(), 0),
-				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()),
-						changeset.getComment()));
+		gitCommit(new PersonIdent(changeset.getCreatorName(), changeset.getEmailAddress(), changeset.getCreationDate(),
+				0), getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()), changeset.getComment()));
 	}
 
 	@Override
