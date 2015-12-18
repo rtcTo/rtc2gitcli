@@ -1,11 +1,11 @@
 package to.rtc.cli.migrate.command;
 
-import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.List;
 
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.ClientConfiguration;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.CLIParser;
@@ -20,9 +20,12 @@ public abstract class RtcCommandDelegate {
 
 	private final String commandLine;
 
+	protected final IChangeLogOutput output;
+
 	protected RtcCommandDelegate(IScmClientConfiguration config,
-			String commandLine) {
+			IChangeLogOutput output, String commandLine) {
 		this.config = config;
+		this.output = output;
 		this.commandLine = commandLine;
 	}
 
@@ -32,12 +35,8 @@ public abstract class RtcCommandDelegate {
 		try {
 			return command.run(config);
 		} finally {
-			config.getContext()
-					.stdout()
-					.println(
-							"DelegateCommand [" + this + "] finished in ["
-									+ (System.currentTimeMillis() - start)
-									+ "]ms");
+			output.writeLine("DelegateCommand [" + this + "] finished in ["
+					+ (System.currentTimeMillis() - start) + "]ms");
 		}
 	}
 
@@ -78,14 +77,6 @@ public abstract class RtcCommandDelegate {
 			return super.toString();
 		}
 		return commandLine;
-	}
-
-	protected final PrintStream stdout() {
-		return config.getContext().stdout();
-	}
-
-	protected final PrintStream stderr() {
-		return config.getContext().stderr();
 	}
 
 }

@@ -11,6 +11,7 @@ import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
@@ -20,9 +21,10 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
 	public AcceptCommandDelegate(IScmClientConfiguration config,
-			String targetWorkspace, String changeSetUuid, boolean baseline,
+			IChangeLogOutput output, String targetWorkspace,
+			String changeSetUuid, boolean baseline,
 			boolean acceptMissingChangesets) {
-		super(config, "accept " + targetWorkspace + " " + changeSetUuid
+		super(config, output, "accept " + targetWorkspace + " " + changeSetUuid
 				+ " baseline[" + baseline + "]");
 		setSubCommandLine(targetWorkspace, changeSetUuid, baseline,
 				acceptMissingChangesets);
@@ -36,26 +38,24 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 			IStatus status = e.getStatus();
 			if (status != null) {
 				switch (status.getCode()) {
+				case Constants.STATUS_FAILURE:
+					output.writeLine("There was a [FAILURE]. We ignore that, because the following accepts should fix that");
+					return Constants.STATUS_FAILURE;
 				case Constants.STATUS_GAP:
-					stdout().println(
-							"There was a [GAP]. We ignore that, because the following accepts should fix that");
+					output.writeLine("There was a [GAP]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_GAP;
 				case Constants.STATUS_CONFLICT:
-					stdout().println(
-							"There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
+					output.writeLine("There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_CONFLICT;
 				case Constants.STATUS_NWAY_CONFLICT:
-					stdout().println(
-							"There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
+					output.writeLine("There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_NWAY_CONFLICT;
 				case Constants.STATUS_WORKSPACE_UNCHANGED:
-					stdout().println(
-							"There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
+					output.writeLine("There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
 					return Constants.STATUS_WORKSPACE_UNCHANGED;
 				default:
-					stderr().println(
-							"There was an unexpected exception with state ["
-									+ status.getCode() + "]");
+					output.writeLine("There was an unexpected exception with state ["
+							+ status.getCode() + "]");
 					break;
 				}
 			}
@@ -95,6 +95,7 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 		if (acceptMissingChangesets) {
 			args.add("--accept-missing-changesets");
 		}
+		args.add("--no-local-refresh");
 		args.add("-r");
 		args.add(uri);
 		args.add("-t");
@@ -112,5 +113,4 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 		args.add(changeSetUuid);
 		return generateCommandLine(args);
 	}
-
 }

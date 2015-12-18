@@ -14,6 +14,7 @@ final class RtcChangeSet implements ChangeSet {
 	private String entryName;
 	private String creatorName;
 	private String emailAddress;
+	private String component;
 
 	RtcChangeSet(String changeSetUuid) {
 		uuid = changeSetUuid;
@@ -45,8 +46,17 @@ final class RtcChangeSet implements ChangeSet {
 		return this;
 	}
 
+	RtcChangeSet setComponent(String component) {
+		this.component = component;
+		return this;
+	}
+
 	String getUuid() {
 		return uuid;
+	}
+
+	String getComponent() {
+		return component;
 	}
 
 	@Override

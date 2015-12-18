@@ -5,6 +5,10 @@
 # to native line endings on checkout.
 *.md text
 *.java text
+<<<<<<< HEAD
 *.properties text
 *.launch text
 
+=======
+*.properties
+>>>>>>> refs/heads/handle_migration_by_tags

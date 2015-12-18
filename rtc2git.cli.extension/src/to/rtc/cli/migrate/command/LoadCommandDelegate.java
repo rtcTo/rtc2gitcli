@@ -8,6 +8,7 @@ import com.ibm.team.filesystem.cli.client.internal.subcommands.LoadCmdOptions;
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
@@ -16,9 +17,10 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
 public class LoadCommandDelegate extends RtcCommandDelegate {
 
 	public LoadCommandDelegate(IScmClientConfiguration config,
-			String workspace, boolean force) {
-		super(config, "load " + workspace + " force[" + force + "]");
-		setSubCommandLineByReflection(config, workspace, force);
+			IChangeLogOutput output, String workspace, String component,
+			boolean force) {
+		super(config, output, "load " + workspace + " force[" + force + "]");
+		setSubCommandLineByReflection(config, workspace, component, force);
 	}
 
 	@Override
@@ -32,18 +34,20 @@ public class LoadCommandDelegate extends RtcCommandDelegate {
 	}
 
 	private void setSubCommandLineByReflection(IScmClientConfiguration config,
-			String workspace, boolean force) {
+			String workspace, String component, boolean force) {
 		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
 		String username = getSubCommandOption(config,
 				CommonOptions.OPT_USERNAME);
 		String password = getSubCommandOption(config,
 				CommonOptions.OPT_PASSWORD);
-		setSubCommandLine(config,
-				generateCommandLine(uri, username, password, workspace, force));
+		setSubCommandLine(
+				config,
+				generateCommandLine(uri, username, password, workspace,
+						component, force));
 	}
 
 	private ICommandLine generateCommandLine(String uri, String username,
-			String password, String workspace, boolean force) {
+			String password, String workspace, String component, boolean force) {
 		List<String> args = new ArrayList<String>();
 		args.add("-r");
 		args.add(uri);
@@ -51,11 +55,16 @@ public class LoadCommandDelegate extends RtcCommandDelegate {
 		args.add(username);
 		args.add("-P");
 		args.add(password);
-		args.add(workspace);
 
 		if (force) {
 			args.add("--force");
 		}
+
+		args.add(workspace);
+		if (component != null) {
+			args.add(component);
+		}
+
 		return generateCommandLine(args);
 	}
 }
