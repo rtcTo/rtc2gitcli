@@ -5,4 +5,5 @@
 # to native line endings on checkout.
 *.md text
 *.java text
-*.properties
+*.properties text
+
