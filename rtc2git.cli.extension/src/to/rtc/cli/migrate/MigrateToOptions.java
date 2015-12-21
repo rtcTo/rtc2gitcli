@@ -23,15 +23,12 @@ public class MigrateToOptions implements IOptionSource {
 		SubcommandUtil.addRepoLocationToOptions(options);
 		options.addOption(new PositionalOptionDefinition(OPT_SRC_WS, "source-workspace-name", 1, 1), //$NON-NLS-1$
 				"name of the pre configured source RTC workspace that could follow the stream to migrate.");
-		options.addOption(new PositionalOptionDefinition(OPT_DEST_WS, "destination-workspace-name", 1, 1), //$NON-NLS-1$
+		options.addOption(
+				new PositionalOptionDefinition(OPT_DEST_WS, "destination-workspace-name", 1, 1), //$NON-NLS-1$
 				"name of the pre configured RTC workspace that holds the current state of the migration and that follows the source-workspace-name.");
 
-		// rtc2git migration properties
 		options.addOption(new NamedOptionDefinition(OPT_DIRECTORY, "d", "directory", 1), //$NON-NLS-1$
 				"The root directory to save files to.");
-		options.addOption(new PositionalOptionDefinition(OPT_MIGRATION_PROPERTIES, "migration.properties", 1, 1), //$NON-NLS-1$
-				"path location of the migration.properties file.");
-
 		return options;
 	}
 }
