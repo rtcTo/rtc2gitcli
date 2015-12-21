@@ -96,7 +96,13 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		migrator.init(sandboxDirectory, readProperties(subargs));
 
 		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+		boolean isFirstTag = true;
 		for (RtcTag tag : tags) {
+			if (isFirstTag && tag.isEmpty()) {
+				output.writeLine("Ignore first empty tag, as we cannot accept baselines");
+				break;
+			}
+			isFirstTag = false;
 			final long startTag = System.currentTimeMillis();
 			output.writeLine("Start migration of Tag [" + tag.getName() + "]");
 			try {
