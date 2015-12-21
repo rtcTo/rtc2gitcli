@@ -4,13 +4,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import to.rtc.cli.migrate.command.AcceptCommandDelegate;
+import to.rtc.cli.migrate.command.LoadCommandDelegate;
+
 import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
-
-import to.rtc.cli.migrate.command.AcceptCommandDelegate;
-import to.rtc.cli.migrate.command.LoadCommandDelegate;
 
 public class RtcMigrator {
 
@@ -29,10 +29,14 @@ public class RtcMigrator {
 
 	public void migrateTag(RtcTag tag) throws CLIClientException {
 		List<RtcChangeSet> changeSets = tag.getOrderedChangeSets();
+		int changeSetCounter = 0;
+		int numberOfChangesets = changeSets.size();
 		for (RtcChangeSet changeSet : changeSets) {
 			acceptAndLoadChangeSet(changeSet);
 			handleInitialLoad(changeSet);
 			migrator.commitChanges(changeSet);
+			changeSetCounter++;
+			output.writeLine("Migrated [" + changeSetCounter + "]/[" + numberOfChangesets + "] changesets.");
 		}
 		if (!"HEAD".equals(tag.getName())) {
 			migrator.createTag(tag);

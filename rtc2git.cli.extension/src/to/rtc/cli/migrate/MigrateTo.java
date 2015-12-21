@@ -86,7 +86,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 		// compare destination workspace with stream of source workspace to get
 		// tagging information
-		output.writeLine("Get list of tags and changesets form RTC.");
+		output.writeLine("Get full history information from RTC. This could take a large amount of time.");
 		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 		Collections.sort(tags, new TagCreationDateComparator());
 
@@ -101,17 +101,21 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		migrator.init(sandboxDirectory);
 
 		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+		int numberOfTags = tags.size();
 		for (RtcTag tag : tags) {
 			final long startTag = System.currentTimeMillis();
-			output.writeLine("Start migration of Tag [" + tag.getName() + "]");
+			int tagCounter = 0;
+			output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/" + numberOfTags
+					+ "]");
 			try {
 				rtcMigrator.migrateTag(tag);
+				tagCounter++;
 			} catch (CLIClientException e) {
 				e.printStackTrace();
 				throw new RuntimeException(e);
 			}
-			output.writeLine("Migration of tag [" + tag.getName() + "] took ["
-					+ (System.currentTimeMillis() - startTag) / 1000 + "] s");
+			output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
+					+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
 		}
 		output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 	}
@@ -143,6 +147,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
 
+		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
+
 		SnapshotSyncReport syncReport;
 		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
@@ -170,7 +176,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
 			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
+			output.writeLine("Get list of baselines and changesets form RTC.");
 			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
+			output.writeLine("Parse the list of baselines and changesets.");
 			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
 					.stdout()), getLastChangeSetUuids(repo, sourceWs));
 
