@@ -344,11 +344,18 @@ public final class GitMigrator implements Migrator {
 	@Override
 	public void createTag(Tag tag) {
 		try {
-			git.tag().setTagger(defaultIdent).setName(tag.getName()).call();
+			git.tag().setTagger(defaultIdent).setName(createTagName(tag.getName())).call();
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to tag", e);
 		}
+	}
+
+	String createTagName(String tagName) {
+		if (tagName == null) {
+			return null;
+		}
+		return tagName.replaceAll(" ", "_");
 	}
 }
