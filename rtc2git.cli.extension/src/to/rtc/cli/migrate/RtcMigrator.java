@@ -53,12 +53,6 @@ public class RtcMigrator {
 				throw new CLIClientException("There was a PROBLEM in accepting that we cannot solve.");
 			}
 			break;
-		case Constants.STATUS_FAILURE:
-			output.writeLine("Got a failure during load action. Reload all components with force option.");
-			new LoadCommandDelegate(config, output, workspace, null, true).run();
-			output.writeLine("Retry accepting");
-			result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, false).run();
-			break;
 		default:
 			break;
 		}
