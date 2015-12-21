@@ -1,5 +1,6 @@
 package to.rtc.cli.migrate;
 
+import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.util.SubcommandUtil;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.IOptionSource;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.IOptionKey;
@@ -15,6 +16,7 @@ public class MigrateToOptions implements IOptionSource {
 
 	public static final IOptionKey OPT_DIRECTORY = new OptionKey("directory"); //$NON-NLS-1$
 	public static final IOptionKey OPT_MIGRATION_PROPERTIES = new OptionKey("migrationProperties"); //$NON-NLS-1$
+	public static final IOptionKey OPT_RTC_CONNECTION_TIMEOUT = new OptionKey("timeout");
 
 	@Override
 	public Options getOptions() throws ConflictingOptionException {
@@ -27,8 +29,9 @@ public class MigrateToOptions implements IOptionSource {
 				new PositionalOptionDefinition(OPT_DEST_WS, "destination-workspace-name", 1, 1), //$NON-NLS-1$
 				"name of the pre configured RTC workspace that holds the current state of the migration and that follows the source-workspace-name.");
 
-		options.addOption(new NamedOptionDefinition(OPT_DIRECTORY, "d", "directory", 1), //$NON-NLS-1$
-				"The root directory to save files to.");
+		options.addOption(CommonOptions.OPT_DIRECTORY, CommonOptions.OPT_DIRECTORY_HELP);
+		options.addOption(new NamedOptionDefinition(OPT_RTC_CONNECTION_TIMEOUT, "t", "timeout", 1),
+				"Timeout in seconds, default is 900");
 		return options;
 	}
 }

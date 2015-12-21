@@ -65,17 +65,24 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		ICommandLine subargs = config.getSubcommandCommandLine();
 		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
 
-		final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+		int timeout = 900;
+		if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
+			String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT).getValue();
+			timeout = Integer.valueOf(timeoutOptionValue);
+		}
+
+		final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
+				subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
 		SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-		final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+		final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
+				subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
 		SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
 		// Initialize connection to RTC
+		output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
 		IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
 		ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
-		repo.setConnectionTimeout(3600);
+		repo.setConnectionTimeout(timeout);
 
 		IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
 		IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
@@ -83,10 +90,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 		// compare destination workspace with stream of source workspace to get
 		// tagging information
+		output.writeLine("Get list of tags and changesets form RTC.");
 		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 		Collections.sort(tags, new TagCreationDateComparator());
 
 		final File sandboxDirectory;
+		output.writeLine("Start migration of tags.");
 		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
 			sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
 		} else {
@@ -165,8 +174,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		SnapshotSyncReport syncReport;
 		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo)
-					.getWorkspaceConnection(sourceWs, getMonitor());
+			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
+					sourceWs, getMonitor());
 
 			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
 					.getCurrentAcceptFlow().getFlowNode());
@@ -190,8 +199,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
 			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(
-					new ChangeLogStreamOutput(config.getContext().stdout()), getLastChangeSetUuids(repo, sourceWs));
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
+					.stdout()), getLastChangeSetUuids(repo, sourceWs));
 
 			tagMap = visitor.acceptInto(changelog);
 
