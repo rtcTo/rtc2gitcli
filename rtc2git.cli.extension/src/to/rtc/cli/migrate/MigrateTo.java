@@ -29,6 +29,7 @@ import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogEn
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogCustomizer;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogStreamOutput;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.GenerateChangeLogOperation;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.CopyFileAreaPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.FallbackPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.SnapshotPathResolver;
@@ -52,7 +53,7 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
 	private IProgressMonitor getMonitor() {
-		return new NullProgressMonitor();
+		return new LogTaskMonitor(new DateTimeStreamOutput(config.getContext().stdout()));
 	}
 
 	public abstract Migrator getMigrator();
@@ -85,16 +86,21 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		// tagging information
 		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 		Collections.sort(tags, new TagCreationDateComparator());
-
 		final File sandboxDirectory;
-		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
+		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY))
+
+		{
 			sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
-		} else {
+		} else
+
+		{
 			sandboxDirectory = new File(System.getProperty("user.dir"));
 		}
-		Migrator migrator = getMigrator();
-		migrator.init(sandboxDirectory, readProperties(subargs));
 
+		Migrator migrator = getMigrator();
+		migrator.init(sandboxDirectory,
+
+				readProperties(subargs));
 		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
 		boolean isFirstTag = true;
 		for (RtcTag tag : tags) {
@@ -205,5 +211,48 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			e.printStackTrace();
 		}
 		return tagMap;
+	}
+
+	static class LogTaskMonitor extends NullProgressMonitor {
+		private String taskName;
+		private int total = -1;
+		private int done = 0;
+		private final IChangeLogOutput output;
+
+		LogTaskMonitor(IChangeLogOutput output) {
+			this.output = output;
+		}
+
+		@Override
+		public void beginTask(String task, int totalWork) {
+			if (task != null && !task.isEmpty()) {
+				taskName = task;
+				output.writeLine(taskName + " start");
+			}
+			total = totalWork;
+		}
+
+		@Override
+		public void subTask(String subTask) {
+			output.setIndent(2);
+			output.writeLine(subTask + " [" + getPercent() + "%]");
+		}
+
+		private String getPercent() {
+			if (total <= 0) {
+				return "n/a";
+			}
+			return String.valueOf(done * 100 / total);
+		}
+
+		@Override
+		public void worked(int workDone) {
+			done += workDone;
+		}
+
+		@Override
+		public void done() {
+			taskName = null;
+		}
 	}
 }
