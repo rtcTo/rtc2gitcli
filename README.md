@@ -9,26 +9,26 @@ Inspired by [rtc2git](https://github.com/rtcTo/rtc2git), but written in Java and
 
 
 ## Usage
-- create an source RTC workspace with flow target and components as wanted --> *SOURCE_WORKSPACE_NAME*
-- create an target RTC workspace with *SOURCE_WORKPSACE_NAME* as flow target --> *TARGET_WORKSPACE_NAME*
+- create an source RTC workspace with flow target and components as wanted --> *SOURCE_WORKSPACE*
+- create an target RTC workspace with *SOURCE_WORKPSACE* as flow target --> *TARGET_WORKSPACE*
 - open shell or cmd
 - step into the target directory
 - load the initial target workspace:
 
 ```
-scm load -r <uri> -u <username> -P password *TARGET_WORKSPACE_NAME*
+scm load -r <uri> -u <username> -P <password> <TARGET_WORKSPACE>
 ```
 
 - execute the actual migration:
 
 ```
-scm migrate-to-git -r <uri> -u <username> -P password *SOURCE_WORKSPACE_NAME* *TARGET_WORKSPACE_NAME*  <migration.properties>
+scm migrate-to-git -r <uri> -u <username> -P <password> <SOURCE_WORKSPACE> <TARGET_WORKSPACE> <migration.properties>
 ```
 
 
 ## How does it work?
 1. It initalizes an empty git repository and clones it
-2. In this repository, it loads TARGET_WORKSPACE_NAME rtc workspace
+2. In this repository, it loads *TARGET_WORKSPACE* rtc workspace
 3. Every change set is accepted
 4. If there is a baseline on the change set, a tag is created on git
 5. The change set is committed to git
