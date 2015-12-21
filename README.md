@@ -8,7 +8,7 @@ It is implemented as scm cli plugin.
 
 ## Prerequirements
 - **[SCM Tools](https://jazz.net/downloads/rational-team-concert/releases/5.0.1?p=allDownloads)** from IBM. To avoid an account creation on jazz.net site, you could use [bugmenot](http://bugmenot.com/) (see also wiki page [configure RTC CLI] (https://github.com/rtcTo/rtc2git/wiki/configure-RTC-CLI))
-- **[RTC plugin](https://jazz.net/downloads/rational-team-concert/releases/5.0.1?p=allDownloads)** installed in an eclipse 4.2.x environment for OSGI plugin developement.
+- Eclipse configured with scm tools as target platform (see wiki [configure scm tools target platform](https://github.com/rtcTo/rtc2gitcli/wiki/configure-target-platform))
 
 ## Usage
 - create an RTC workspace with flow target and components as wanted --> SOURCE_WORKSPACE_NAME

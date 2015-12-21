@@ -1,9 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
+	<classpathentry exported="true" kind="lib" path="lib/commons-codec-1.6.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/commons-logging-1.1.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/httpclient-4.3.6.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/httpcore-4.3.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/JavaEWAH-0.7.9.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/jsch-0.1.53.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/org.eclipse.jdt.annotation-1.1.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/org.eclipse.jgit-4.1.1.201511131810-r.jar"/>
+	<classpathentry exported="true" kind="lib" path="lib/slf4j-api-1.7.2.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6">
+		<attributes>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="src" path="src_test"/>
+	<classpathentry kind="src" output="bin" path="src">
+		<attributes>
+			<attribute name="optional" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="bin_test" path="src_test">
+		<attributes>
+			<attribute name="optional" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
+		<attributes>
+			<attribute name="maven.pomderived" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
