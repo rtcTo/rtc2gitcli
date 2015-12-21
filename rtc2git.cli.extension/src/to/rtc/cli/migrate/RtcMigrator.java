@@ -32,11 +32,16 @@ public class RtcMigrator {
 		int changeSetCounter = 0;
 		int numberOfChangesets = changeSets.size();
 		for (RtcChangeSet changeSet : changeSets) {
+			long startAccept = System.currentTimeMillis();
 			acceptAndLoadChangeSet(changeSet);
 			handleInitialLoad(changeSet);
+			long acceptDuration = System.currentTimeMillis() - startAccept;
+			long startCommit = System.currentTimeMillis();
 			migrator.commitChanges(changeSet);
 			changeSetCounter++;
-			output.writeLine("Migrated [" + changeSetCounter + "]/[" + numberOfChangesets + "] changesets.");
+			output.writeLine("Migrated [" + changeSetCounter + "]/[" + numberOfChangesets
+					+ "] changesets. Accept took " + acceptDuration + "ms commit took "
+					+ (System.currentTimeMillis() - startCommit) + "ms");
 		}
 		if (!"HEAD".equals(tag.getName())) {
 			migrator.createTag(tag);
