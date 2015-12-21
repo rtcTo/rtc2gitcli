@@ -12,6 +12,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.ibm.team.filesystem.cli.client.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.internal.ScmCommandLineArgument;
+import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil.ItemType;
 import com.ibm.team.filesystem.cli.core.util.SubcommandUtil;
@@ -92,8 +93,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 		final File sandboxDirectory;
 		output.writeLine("Start migration of tags.");
-		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY)) {
-			sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
+		if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
+			sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
 		} else {
 			sandboxDirectory = new File(System.getProperty("user.dir"));
 		}
