@@ -1,5 +1,7 @@
 package to.rtc.cli.migrate.git;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -337,6 +339,13 @@ public class GitMigratorTest {
 		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", new File(basedir,
 				".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata", "/subdir/subsub/some.dll",
 				"/some.zip", "/subdir/some.jar"));
+	}
+
+	@Test
+	public void testCreateTagNameReplacesWhiteSpacesWithUnderscore() {
+		String tagname = migrator.createTagName("tag with whitespaces");
+
+		assertThat(tagname, is("tag_with_whitespaces"));
 	}
 
 	@Test

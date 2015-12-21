@@ -91,4 +91,8 @@ final class RtcTag implements Tag {
 	public long getCreationDate() {
 		return creationDate;
 	}
+
+	public boolean isEmpty() {
+		return totalChangeSetCount <= 0;
+	}
 }
