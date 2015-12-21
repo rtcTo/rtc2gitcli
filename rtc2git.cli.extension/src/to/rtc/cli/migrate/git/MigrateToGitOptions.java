@@ -5,6 +5,8 @@ package to.rtc.cli.migrate.git;
 
 import to.rtc.cli.migrate.MigrateToOptions;
 
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.IOptionKey;
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.OptionKey;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.PositionalOptionDefinition;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
@@ -14,6 +16,8 @@ import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.Conflictin
  *
  */
 public class MigrateToGitOptions extends MigrateToOptions {
+
+	public static final IOptionKey OPT_MIGRATION_PROPERTIES = new OptionKey("migrationProperties"); //$NON-NLS-1$
 
 	@Override
 	public Options getOptions() throws ConflictingOptionException {

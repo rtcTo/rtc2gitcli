@@ -15,7 +15,6 @@ public class MigrateToOptions implements IOptionSource {
 	public static final IOptionKey OPT_DEST_WS = new OptionKey("destination-workspace-name"); //$NON-NLS-1$
 
 	public static final IOptionKey OPT_DIRECTORY = new OptionKey("directory"); //$NON-NLS-1$
-	public static final IOptionKey OPT_MIGRATION_PROPERTIES = new OptionKey("migrationProperties"); //$NON-NLS-1$
 	public static final IOptionKey OPT_RTC_CONNECTION_TIMEOUT = new OptionKey("timeout");
 
 	@Override

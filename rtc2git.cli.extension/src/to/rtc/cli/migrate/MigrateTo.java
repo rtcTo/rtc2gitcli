@@ -1,15 +1,11 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -102,7 +98,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			sandboxDirectory = new File(System.getProperty("user.dir"));
 		}
 		Migrator migrator = getMigrator();
-		migrator.init(sandboxDirectory, readProperties(subargs));
+		migrator.init(sandboxDirectory);
 
 		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
 		for (RtcTag tag : tags) {
@@ -143,30 +139,6 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			e.printStackTrace();
 		}
 		return lastChangeSets;
-	}
-
-	private Properties readProperties(ICommandLine subargs) {
-		final Properties props = new Properties();
-		try {
-			FileInputStream in = new FileInputStream(subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES));
-			try {
-				props.load(in);
-			} finally {
-				in.close();
-			}
-		} catch (IOException e) {
-			throw new RuntimeException("Unable to read migration properties", e);
-		}
-		return trimProperties(props);
-	}
-
-	Properties trimProperties(Properties props) {
-		Set<Object> keyset = props.keySet();
-		for (Object keyObject : keyset) {
-			String key = (String) keyObject;
-			props.setProperty(key, props.getProperty(key).trim());
-		}
-		return props;
 	}
 
 	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
