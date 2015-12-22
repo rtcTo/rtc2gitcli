@@ -36,4 +36,8 @@ public class DateTimeStreamOutput extends ChangeLogStreamOutput {
 		return String.format("[%1$tY-%1$tm-%1$td %1$tT] %2$s", new Date(), message);
 	}
 
+
+	public PrintStream getOutputStream() {
+		return System.out;
+	}
 }

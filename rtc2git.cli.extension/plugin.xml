@@ -8,7 +8,7 @@
             id="to.rtc.cli.migrate.git.MigrateToGit"
             initpolicy="uri/argument/ancestor"
             name="migrate-to-git"
-            options="to.rtc.cli.migrate.MigrateToOptions"
+            options="to.rtc.cli.migrate.git.MigrateToGitOptions"
             shortHelp="migrate to git">
       </subcommand>
    </extension>

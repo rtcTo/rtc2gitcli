@@ -54,8 +54,8 @@ public class GitMigratorTest {
 	@Before
 	public void setUo() {
 		cs = Charset.forName("UTF-8");
-		migrator = new GitMigrator();
 		props = new Properties();
+		migrator = new GitMigrator(props);
 		basedir = tempFolder.getRoot();
 	}
 
@@ -79,7 +79,8 @@ public class GitMigratorTest {
 
 		assertFalse(new File(basedir, ".gitattributes").exists());
 
-		migrator.init(basedir, props);
+		migrator.initialize(props);
+		migrator.init(basedir);
 
 		checkGit("John Doe", "john.doe@somewhere.com", "Initial commit", new File(basedir, ".gitignore"),
 				GitMigrator.ROOT_IGNORED_ENTRIES);
@@ -91,7 +92,7 @@ public class GitMigratorTest {
 		Files.writeLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/", "/.jazzShed"), cs, false);
 		props.setProperty("global.gitignore.entries", "/projectX/WebContent/node_modules; *.ignored");
 
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(basedir, ".gitignore"), Arrays.asList(
 				"/.jazz5", "/bin/", "/.jazzShed", "/.metadata", "/projectX/WebContent/node_modules", "*.ignored"));
@@ -101,7 +102,7 @@ public class GitMigratorTest {
 	public void testInit_Gitattributes() throws IOException {
 		props.setProperty("gitattributes", "* text=auto");
 
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		File gitattributes = new File(basedir, ".gitattributes");
 		assertTrue(gitattributes.exists() && gitattributes.isFile());
@@ -114,7 +115,7 @@ public class GitMigratorTest {
 	public void testInit_GitRepoAvailable() throws Exception {
 		git = Git.init().setDirectory(basedir).call();
 
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(basedir, ".gitignore"),
 				GitMigrator.ROOT_IGNORED_ENTRIES);
@@ -122,7 +123,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGetCommitMessage() {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		assertEquals("gugus gaga", migrator.getCommitMessage("gugus", "gaga"));
 	}
@@ -130,7 +131,7 @@ public class GitMigratorTest {
 	@Test
 	public void testGetCommitMessage_withCustomFormat() {
 		props.setProperty("commit.message.format", "%1s%n%n%2s");
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		String lf = System.getProperty("line.separator");
 
 		assertEquals("gug%us" + lf + lf + "ga%ga", migrator.getCommitMessage("gug%us", "ga%ga"));
@@ -143,7 +144,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGetWorkItemNumbers_singleWorkItem() {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
 		assertEquals("4711", migrator.getWorkItemNumbers(items));
@@ -152,7 +153,7 @@ public class GitMigratorTest {
 	@Test
 	public void testGetWorkItemNumbers_singleWorkItem_customFormat() {
 		props.setProperty("rtc.workitem.number.format", "RTC-%s");
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
@@ -162,7 +163,7 @@ public class GitMigratorTest {
 	@Test
 	public void testGetWorkItemNumbers_multipleWorkItems() {
 		props.setProperty("rtc.workitem.number.format", "RTC-%s");
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
@@ -172,7 +173,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testCommitChanges() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		File testFile = new File(basedir, "somefile");
 		Files.writeLines(testFile, Collections.singletonList("somevalue"), cs, false);
@@ -185,7 +186,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testCommitChanges_noWorkItem() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		File testFile = new File(basedir, "somefile");
 		Files.writeLines(testFile, Collections.singletonList("somevalue"), cs, false);
@@ -242,7 +243,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testAddUpdateGitignoreIfJazzignoreAddedOrChanged() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		File jazzignore = new File(basedir, ".jazzignore");
 		File gitignore = new File(basedir, ".gitignore");
 
@@ -257,7 +258,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testAddUpdateGitignoreIfJazzignoreAddedOrChangedInSubdirectory() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
 		File gitignore = new File(subdir, ".gitignore");
@@ -273,7 +274,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testRemovedGitignoreIfJazzignoreRemoved() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		File jazzignore = new File(basedir, ".jazzignore");
 		File gitignore = new File(basedir, ".gitignore");
 
@@ -290,7 +291,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testRestoreGitignoreIfJazzignoreNotRemoved() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		File jazzignore = new File(basedir, ".jazzignore");
 		File gitignore = new File(basedir, ".gitignore");
 
@@ -307,7 +308,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testRestoreGitignoreIfJazzignoreNotRemovedInSubdirectory() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
 		File gitignore = new File(subdir, ".gitignore");
@@ -326,7 +327,8 @@ public class GitMigratorTest {
 	@Test
 	public void testGlobalIgnoredFilesAddedToRootGitIgnore() throws Exception {
 		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dll");
-		migrator.init(basedir, props);
+		migrator.initialize(props);
+		migrator.init(basedir);
 
 		create(new File(basedir, "some.zip"));
 		create(new File(basedir, "subdir/some.jar"));
@@ -334,9 +336,9 @@ public class GitMigratorTest {
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment",
-				new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
-						"/subdir/subsub/some.dll", "/subdir/some.jar", "/some.zip"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", new File(basedir,
+				".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata", "/subdir/subsub/some.dll",
+				"/some.zip", "/subdir/some.jar"));
 	}
 
 	@Test
@@ -348,7 +350,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testCreateTag() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 
 		migrator.createTag(TestTag.INSTANCE);
 
@@ -361,7 +363,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGetExistingIgnoredFiles() throws Exception {
-		migrator.init(basedir, props);
+		migrator.init(basedir);
 		Files.writeLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/some.zip", "/someother.zip",
 				"/subdir/some.jar", "/subdir/subsub/some.dll", "/subdir/subsub/someother.dll"), cs, false);
 
@@ -370,8 +372,8 @@ public class GitMigratorTest {
 		create(new File(basedir, "subdir/some.jar"));
 		create(new File(basedir, "subdir/subsub/some.dll"));
 
-		SortedSet<String> expected = new TreeSet<String>(
-				Arrays.asList("/some.zip", "/subdir/some.jar", "/subdir/subsub/some.dll"));
+		SortedSet<String> expected = new TreeSet<String>(Arrays.asList("/some.zip", "/subdir/some.jar",
+				"/subdir/subsub/some.dll"));
 
 		SortedSet<String> stillExistingFiles = migrator.getExistingIgnoredFiles();
 

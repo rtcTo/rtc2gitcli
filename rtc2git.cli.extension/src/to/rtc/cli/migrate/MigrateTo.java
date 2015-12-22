@@ -1,21 +1,20 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 
 import com.ibm.team.filesystem.cli.client.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.internal.ScmCommandLineArgument;
+import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil.ItemType;
 import com.ibm.team.filesystem.cli.core.util.SubcommandUtil;
@@ -52,6 +51,8 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
+	private DateTimeStreamOutput output;
+
 	private IProgressMonitor getMonitor() {
 		return new LogTaskMonitor(new DateTimeStreamOutput(config.getContext().stdout()));
 	}
@@ -61,66 +62,97 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 	@Override
 	public void run() throws FileSystemException {
 		long start = System.currentTimeMillis();
+		output = new DateTimeStreamOutput(config.getContext().stdout());
 
-		// Consume the command-line
-		ICommandLine subargs = config.getSubcommandCommandLine();
-		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
+		try {
+			// Consume the command-line
+			ICommandLine subargs = config.getSubcommandCommandLine();
 
-		final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
-		SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-		final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
-				.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
-		SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
+			int timeout = 900;
+			if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
+				String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)
+						.getValue();
+				timeout = Integer.valueOf(timeoutOptionValue);
+			}
 
-		// Initialize connection to RTC
-		IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
-		ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
-		repo.setConnectionTimeout(3600);
+			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+			SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
+			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+			SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
-		IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
-		IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
-				config);
+			// Initialize connection to RTC
+			output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
+			IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
+			ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
+			repo.setConnectionTimeout(timeout);
 
-		// compare destination workspace with stream of source workspace to get
-		// tagging information
-		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
-		Collections.sort(tags, new TagCreationDateComparator());
-		final File sandboxDirectory;
-		if (subargs.hasOption(MigrateToOptions.OPT_DIRECTORY))
+			IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
+			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
+					config);
 
-		{
-			sandboxDirectory = new File(subargs.getOption(MigrateToOptions.OPT_DIRECTORY));
-		} else
+			// compare destination workspace with stream of source workspace to
+			// get
+			// tagging information
+			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
+			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
+			Collections.sort(tags, new TagCreationDateComparator());
 
-		{
-			sandboxDirectory = new File(System.getProperty("user.dir"));
+			logTagInfos(tags);
+
+			final File sandboxDirectory;
+			output.writeLine("Start migration of tags.");
+			if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
+				sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
+			} else {
+				sandboxDirectory = new File(System.getProperty("user.dir"));
+			}
+			Migrator migrator = getMigrator();
+			migrator.init(sandboxDirectory);
+
+			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+			boolean isFirstTag = true;
+			int numberOfTags = tags.size();
+			int tagCounter = 0;
+			for (RtcTag tag : tags) {
+				if (isFirstTag && tag.isEmpty()) {
+					output.writeLine("Ignore first empty tag, as we cannot accept baselines");
+					break;
+				}
+				isFirstTag = false;
+				final long startTag = System.currentTimeMillis();
+				output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/"
+						+ numberOfTags + "]");
+				try {
+					rtcMigrator.migrateTag(tag);
+					tagCounter++;
+				} catch (CLIClientException e) {
+					e.printStackTrace(output.getOutputStream());
+					throw new RuntimeException(e);
+				}
+				output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
+						+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
+			}
+		} catch (Throwable t) {
+			t.printStackTrace(output.getOutputStream());
+			throw new RuntimeException(t);
+		} finally {
+			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 		}
+	}
 
-		Migrator migrator = getMigrator();
-		migrator.init(sandboxDirectory,
-
-				readProperties(subargs));
-		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
-		boolean isFirstTag = true;
+	private void logTagInfos(List<RtcTag> tags) {
+		output.writeLine("********** BASELINE INFOS **********");
 		for (RtcTag tag : tags) {
-			if (isFirstTag && tag.isEmpty()) {
-				output.writeLine("Ignore first empty tag, as we cannot accept baselines");
-				break;
+			output.writeLine("  Baseline [" + tag.getName() + "] created at [" + (new Date(tag.getCreationDate()))
+					+ "] total number of changesets [" + tag.getOrderedChangeSets().size() + "]");
+			for (Entry<String, List<RtcChangeSet>> entry : tag.getComponentsChangeSets().entrySet()) {
+				output.writeLine("      number of changesets  for component [" + entry.getKey() + "] is ["
+						+ entry.getValue().size() + "]");
 			}
-			isFirstTag = false;
-			final long startTag = System.currentTimeMillis();
-			output.writeLine("Start migration of Tag [" + tag.getName() + "]");
-			try {
-				rtcMigrator.migrateTag(tag);
-			} catch (CLIClientException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
-			}
-			output.writeLine("Migration of tag [" + tag.getName() + "] took ["
-					+ (System.currentTimeMillis() - startTag) / 1000 + "] s");
 		}
-		output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
+		output.writeLine("********** BASELINE INFOS **********");
 	}
 
 	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
@@ -143,33 +175,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 				lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
 			}
 		} catch (TeamRepositoryException e) {
-			e.printStackTrace();
+			e.printStackTrace(output.getOutputStream());
 		}
 		return lastChangeSets;
-	}
-
-	private Properties readProperties(ICommandLine subargs) {
-		final Properties props = new Properties();
-		try {
-			FileInputStream in = new FileInputStream(subargs.getOption(MigrateToOptions.OPT_MIGRATION_PROPERTIES));
-			try {
-				props.load(in);
-			} finally {
-				in.close();
-			}
-		} catch (IOException e) {
-			throw new RuntimeException("Unable to read migration properties", e);
-		}
-		return trimProperties(props);
-	}
-
-	Properties trimProperties(Properties props) {
-		Set<Object> keyset = props.keySet();
-		for (Object keyObject : keyset) {
-			String key = (String) keyObject;
-			props.setProperty(key, props.getProperty(key).trim());
-		}
-		return props;
 	}
 
 	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
@@ -201,14 +209,22 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
 			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
+			output.writeLine("Get list of baselines and changesets form RTC.");
+			long startTime = System.currentTimeMillis();
 			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
+			output.writeLine("Get list of baselines and changesets form RTC took ["
+					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
+			output.writeLine("Parse the list of baselines and changesets.");
 			HistoryEntryVisitor visitor = new HistoryEntryVisitor(
 					new ChangeLogStreamOutput(config.getContext().stdout()), getLastChangeSetUuids(repo, sourceWs));
 
+			startTime = System.currentTimeMillis();
 			tagMap = visitor.acceptInto(changelog);
+			output.writeLine("Parse the list of baselines and changesets took ["
+					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 
 		} catch (TeamRepositoryException e) {
-			e.printStackTrace();
+			e.printStackTrace(output.getOutputStream());
 		}
 		return tagMap;
 	}

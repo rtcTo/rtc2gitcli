@@ -4,13 +4,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import to.rtc.cli.migrate.command.AcceptCommandDelegate;
+import to.rtc.cli.migrate.command.LoadCommandDelegate;
+
 import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
-
-import to.rtc.cli.migrate.command.AcceptCommandDelegate;
-import to.rtc.cli.migrate.command.LoadCommandDelegate;
 
 public class RtcMigrator {
 
@@ -29,12 +29,22 @@ public class RtcMigrator {
 
 	public void migrateTag(RtcTag tag) throws CLIClientException {
 		List<RtcChangeSet> changeSets = tag.getOrderedChangeSets();
+		int changeSetCounter = 0;
+		int numberOfChangesets = changeSets.size();
+		String tagName = tag.getName();
 		for (RtcChangeSet changeSet : changeSets) {
+			long startAccept = System.currentTimeMillis();
 			acceptAndLoadChangeSet(changeSet);
 			handleInitialLoad(changeSet);
+			long acceptDuration = System.currentTimeMillis() - startAccept;
+			long startCommit = System.currentTimeMillis();
 			migrator.commitChanges(changeSet);
+			changeSetCounter++;
+			output.writeLine("Migrated [" + tagName + "] [" + changeSetCounter + "]/[" + numberOfChangesets
+					+ "] changesets. Accept took " + acceptDuration + "ms commit took "
+					+ (System.currentTimeMillis() - startCommit) + "ms");
 		}
-		if (!"HEAD".equals(tag.getName())) {
+		if (!"HEAD".equals(tagName)) {
 			migrator.createTag(tag);
 		}
 	}
@@ -49,12 +59,6 @@ public class RtcMigrator {
 			if (Constants.STATUS_GAP == result) {
 				throw new CLIClientException("There was a PROBLEM in accepting that we cannot solve.");
 			}
-			break;
-		case Constants.STATUS_FAILURE:
-			output.writeLine("Got a failure during load action. Reload all components with force option.");
-			new LoadCommandDelegate(config, output, workspace, null, true).run();
-			output.writeLine("Retry accepting");
-			result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, false).run();
 			break;
 		default:
 			break;
