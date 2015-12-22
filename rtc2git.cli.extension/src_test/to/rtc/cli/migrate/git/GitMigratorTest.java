@@ -82,8 +82,8 @@ public class GitMigratorTest {
 		migrator.initialize(props);
 		migrator.init(basedir);
 
-		checkGit("John Doe", "john.doe@somewhere.com", "Initial commit", new File(basedir, ".gitignore"),
-				GitMigrator.ROOT_IGNORED_ENTRIES);
+		checkGit("John Doe", "john.doe@somewhere.com", "Initial commit");
+		checkExactLines(new File(basedir, ".gitignore"), GitMigrator.ROOT_IGNORED_ENTRIES);
 		assertFalse(new File(basedir, ".gitattributes").exists());
 	}
 
@@ -94,8 +94,9 @@ public class GitMigratorTest {
 
 		migrator.init(basedir);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(basedir, ".gitignore"), Arrays.asList(
-				"/.jazz5", "/bin/", "/.jazzShed", "/.metadata", "/projectX/WebContent/node_modules", "*.ignored"));
+		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
+		checkExactLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/", "/.jazzShed", "/.metadata",
+				"/projectX/WebContent/node_modules", "*.ignored"));
 	}
 
 	@Test
@@ -117,8 +118,8 @@ public class GitMigratorTest {
 
 		migrator.init(basedir);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit", new File(basedir, ".gitignore"),
-				GitMigrator.ROOT_IGNORED_ENTRIES);
+		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
+		assertEquals(GitMigrator.ROOT_IGNORED_ENTRIES, Files.readLines(new File(basedir, ".gitignore"), cs));
 	}
 
 	@Test
@@ -180,8 +181,8 @@ public class GitMigratorTest {
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", testFile,
-				Collections.singletonList("somevalue"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
+		checkExactLines(testFile, Collections.singletonList("somevalue"));
 	}
 
 	@Test
@@ -193,8 +194,8 @@ public class GitMigratorTest {
 
 		migrator.commitChanges(TestChangeSet.NO_WORKITEM_INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "the checkin comment", testFile,
-				Collections.singletonList("somevalue"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "the checkin comment");
+		checkExactLines(testFile, Collections.singletonList("somevalue"));
 	}
 
 	@Test
@@ -245,15 +246,14 @@ public class GitMigratorTest {
 	public void testAddUpdateGitignoreIfJazzignoreAddedOrChanged() throws Exception {
 		migrator.init(basedir);
 		File jazzignore = new File(basedir, ".jazzignore");
-		File gitignore = new File(basedir, ".gitignore");
 
 		Files.writeLines(jazzignore, Arrays.asList("core.ignore = {*.suo}", "core.ignore.recursive = {*.class}"), cs,
 				false);
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", gitignore,
-				Arrays.asList("/*.suo", "*.class"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
+		checkExactLines(new File(basedir, ".gitignore"), Arrays.asList("/*.suo", "*.class"));
 	}
 
 	@Test
@@ -261,15 +261,14 @@ public class GitMigratorTest {
 		migrator.init(basedir);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
-		File gitignore = new File(subdir, ".gitignore");
 
 		Files.writeLines(jazzignore, Arrays.asList("core.ignore = {*.suo}", "core.ignore.recursive = {*.class}"), cs,
 				false);
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", gitignore,
-				Arrays.asList("/*.suo", "*.class"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
+		checkExactLines(new File(subdir, ".gitignore"), Arrays.asList("/*.suo", "*.class"));
 	}
 
 	@Test
@@ -336,9 +335,9 @@ public class GitMigratorTest {
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment", new File(basedir,
-				".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata", "/subdir/subsub/some.dll",
-				"/some.zip", "/subdir/some.jar"));
+		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
+		checkAllLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
+				"/subdir/subsub/some.dll", "/some.zip", "/subdir/some.jar"));
 	}
 
 	@Test
@@ -372,8 +371,8 @@ public class GitMigratorTest {
 		create(new File(basedir, "subdir/some.jar"));
 		create(new File(basedir, "subdir/subsub/some.dll"));
 
-		SortedSet<String> expected = new TreeSet<String>(Arrays.asList("/some.zip", "/subdir/some.jar",
-				"/subdir/subsub/some.dll"));
+		SortedSet<String> expected = new TreeSet<String>(
+				Arrays.asList("/some.zip", "/subdir/some.jar", "/subdir/subsub/some.dll"));
 
 		SortedSet<String> stillExistingFiles = migrator.getExistingIgnoredFiles();
 
@@ -389,9 +388,19 @@ public class GitMigratorTest {
 		file.createNewFile();
 	}
 
-	private void checkGit(String userName, String userEmail, String comment, File checkedFile,
-			List<String> checkedContent) throws Exception {
-		assertEquals(checkedContent, Files.readLines(checkedFile, cs));
+	private void checkExactLines(File fileName, List<String> expected) throws Exception {
+		assertEquals(expected, Files.readLines(fileName, cs));
+	}
+
+	private void checkAllLines(File fileName, List<String> expected) throws Exception {
+		List<String> readLines = Files.readLines(fileName, cs);
+		assertEquals(expected.size(), readLines.size());
+		for (String line : expected) {
+			assertTrue(readLines.contains(line));
+		}
+	}
+
+	private void checkGit(String userName, String userEmail, String comment) throws Exception {
 		git = Git.open(basedir);
 		Status status = git.status().call();
 		assertTrue(status.getUncommittedChanges().isEmpty());
