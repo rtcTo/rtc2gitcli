@@ -53,9 +53,10 @@ public final class GitMigrator implements Migrator {
 	private PersonIdent defaultIdent;
 	private File rootDir;
 
-	public GitMigrator() {
+	public GitMigrator(Properties properties) {
 		defaultCharset = Charset.forName("UTF-8");
 		ignoredFileExtensions = new HashSet<String>();
+		initialize(properties);
 	}
 
 	private Charset getCharset() {
@@ -292,15 +293,14 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
-				props.getProperty("user.email", "rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
+				"rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 	}
 
 	@Override
-	public void init(File sandboxRootDirectory, Properties props) {
+	public void init(File sandboxRootDirectory) {
 		rootDir = sandboxRootDirectory;
-		initialize(props);
 		try {
 			File bareGitDirectory = new File(sandboxRootDirectory, ".git");
 			if (bareGitDirectory.exists()) {

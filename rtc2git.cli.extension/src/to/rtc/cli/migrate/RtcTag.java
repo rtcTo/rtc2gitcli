@@ -1,4 +1,3 @@
-
 package to.rtc.cli.migrate;
 
 import java.util.ArrayList;
@@ -16,13 +15,11 @@ final class RtcTag implements Tag {
 	private long creationDate;
 	private final Map<String, List<RtcChangeSet>> components;
 	private long totalChangeSetCount;
-	private final Map<String, AtomicInteger> changeSetOrderIndex;
 
 	RtcTag(String uuid) {
 		this.uuid = uuid;
 		components = new HashMap<String, List<RtcChangeSet>>();
 		totalChangeSetCount = 0;
-		changeSetOrderIndex = new HashMap<String, AtomicInteger>();
 	}
 
 	RtcTag setCreationDate(long creationDate) {
@@ -47,7 +44,6 @@ final class RtcTag implements Tag {
 		} else {
 			changesets = new ArrayList<RtcChangeSet>();
 			components.put(component, changesets);
-			changeSetOrderIndex.put(component, new AtomicInteger(0));
 		}
 		changesets.add(changeSet);
 		totalChangeSetCount++;
@@ -59,14 +55,19 @@ final class RtcTag implements Tag {
 
 	List<RtcChangeSet> getOrderedChangeSets() {
 		List<RtcChangeSet> changeSets = new ArrayList<RtcChangeSet>();
+		Map<String, AtomicInteger> changeSetOrderIndex = new HashMap<String, AtomicInteger>();
+
+		for (String component : components.keySet()) {
+			changeSetOrderIndex.put(component, new AtomicInteger(0));
+		}
 
 		while (changeSets.size() < totalChangeSetCount) {
-			changeSets.add(getLatestChangeSet());
+			changeSets.add(getLatestChangeSet(changeSetOrderIndex));
 		}
 		return changeSets;
 	}
 
-	private RtcChangeSet getLatestChangeSet() {
+	private RtcChangeSet getLatestChangeSet(Map<String, AtomicInteger> changeSetOrderIndex) {
 		RtcChangeSet earlyestChangeSet = EARLYEST_CHANGESET;
 		for (Entry<String, List<RtcChangeSet>> entry : components.entrySet()) {
 			AtomicInteger index = changeSetOrderIndex.get(entry.getKey());

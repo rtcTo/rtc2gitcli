@@ -26,4 +26,8 @@ public class DateTimeStreamOutput extends ChangeLogStreamOutput {
 	private String formatMessage(String message) {
 		return DATE_FORMAT.format(new Date()) + ": " + message;
 	}
+
+	public PrintStream getOutputStream() {
+		return System.out;
+	}
 }
