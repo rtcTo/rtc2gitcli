@@ -189,12 +189,18 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
 			output.writeLine("Get list of baselines and changesets form RTC.");
+			long startTime = System.currentTimeMillis();
 			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
+			output.writeLine("Get list of baselines and changesets form RTC took ["
+					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 			output.writeLine("Parse the list of baselines and changesets.");
 			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
 					.stdout()), getLastChangeSetUuids(repo, sourceWs));
 
+			startTime = System.currentTimeMillis();
 			tagMap = visitor.acceptInto(changelog);
+			output.writeLine("Parse the list of baselines and changesets took ["
+					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 
 		} catch (TeamRepositoryException e) {
 			e.printStackTrace(output.getOutputStream());
