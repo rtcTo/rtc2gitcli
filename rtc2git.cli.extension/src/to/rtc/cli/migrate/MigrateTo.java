@@ -1,6 +1,7 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -28,6 +29,7 @@ import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogEn
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogCustomizer;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogStreamOutput;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.GenerateChangeLogOperation;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.CopyFileAreaPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.FallbackPathResolver;
 import com.ibm.team.filesystem.rcp.core.internal.changes.model.SnapshotPathResolver;
@@ -36,6 +38,7 @@ import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.ISubcommand;
+import com.ibm.team.rtc.cli.infrastructure.internal.core.LocalContext;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
@@ -50,10 +53,10 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
-	private DateTimeStreamOutput output;
+	private StreamOutput output;
 
 	private IProgressMonitor getMonitor() {
-		return new NullProgressMonitor();
+		return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
 	}
 
 	public abstract Migrator getMigrator();
@@ -61,7 +64,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 	@Override
 	public void run() throws FileSystemException {
 		long start = System.currentTimeMillis();
-		output = new DateTimeStreamOutput(config.getContext().stdout());
+		setStdOut();
+		output = new StreamOutput(config.getContext().stdout());
 
 		try {
 			// Consume the command-line
@@ -138,6 +142,18 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			throw new RuntimeException(t);
 		} finally {
 			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
+		}
+	}
+
+	private void setStdOut() {
+		Class<?> c = LocalContext.class;
+		Field subargs;
+		try {
+			subargs = c.getDeclaredField("stdout");
+			subargs.setAccessible(true);
+			subargs.set(config.getContext(), new LoggingPrintStream(config.getContext().stdout()));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -226,5 +242,48 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			e.printStackTrace(output.getOutputStream());
 		}
 		return tagMap;
+	}
+
+	static class LogTaskMonitor extends NullProgressMonitor {
+		private String taskName;
+		private int total = -1;
+		private int done = 0;
+		private final IChangeLogOutput output;
+
+		LogTaskMonitor(IChangeLogOutput output) {
+			this.output = output;
+		}
+
+		@Override
+		public void beginTask(String task, int totalWork) {
+			if (task != null && !task.isEmpty()) {
+				taskName = task;
+				output.writeLine(taskName + " start");
+			}
+			total = totalWork;
+		}
+
+		@Override
+		public void subTask(String subTask) {
+			output.setIndent(2);
+			output.writeLine(subTask + " [" + getPercent() + "%]");
+		}
+
+		private int getPercent() {
+			if (total <= 0) {
+				return -1;
+			}
+			return done * 100 / total;
+		}
+
+		@Override
+		public void worked(int workDone) {
+			done += workDone;
+		}
+
+		@Override
+		public void done() {
+			taskName = null;
+		}
 	}
 }
