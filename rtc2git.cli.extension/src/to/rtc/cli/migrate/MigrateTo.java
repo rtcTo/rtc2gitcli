@@ -71,14 +71,14 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
 				String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)
 						.getValue();
-				timeout = Integer.valueOf(timeoutOptionValue);
+				timeout = Integer.parseInt(timeoutOptionValue);
 			}
 
-			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
 			SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument
+					.create(subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
 			SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
 			// Initialize connection to RTC
@@ -184,8 +184,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		SnapshotSyncReport syncReport;
 		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
-					sourceWs, getMonitor());
+			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo)
+					.getWorkspaceConnection(sourceWs, getMonitor());
 
 			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
 					.getCurrentAcceptFlow().getFlowNode());
@@ -214,8 +214,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get list of baselines and changesets form RTC took ["
 					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 			output.writeLine("Parse the list of baselines and changesets.");
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
-					.stdout()), getLastChangeSetUuids(repo, sourceWs));
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(
+					new ChangeLogStreamOutput(config.getContext().stdout()), getLastChangeSetUuids(repo, sourceWs));
 
 			startTime = System.currentTimeMillis();
 			tagMap = visitor.acceptInto(changelog);
