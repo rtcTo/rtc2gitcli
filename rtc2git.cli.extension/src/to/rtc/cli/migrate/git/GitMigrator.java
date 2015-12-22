@@ -293,9 +293,13 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
-				"rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
+	}
+
+	String createTagName(String tagName) {
+		return tagName.replace(' ', '_');
 	}
 
 	@Override
@@ -343,19 +347,15 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void createTag(Tag tag) {
-		try {
-			git.tag().setTagger(defaultIdent).setName(createTagName(tag.getName())).call();
-		} catch (RuntimeException e) {
-			throw e;
-		} catch (Exception e) {
-			throw new RuntimeException("Unable to tag", e);
+		String tagName = tag.getName();
+		if (tagName != null && !tagName.isEmpty()) {
+			try {
+				git.tag().setTagger(defaultIdent).setName(createTagName(tagName)).call();
+			} catch (RuntimeException e) {
+				throw e;
+			} catch (Exception e) {
+				throw new RuntimeException("Unable to tag", e);
+			}
 		}
-	}
-
-	String createTagName(String tagName) {
-		if (tagName == null) {
-			return null;
-		}
-		return tagName.replaceAll(" ", "_");
 	}
 }
