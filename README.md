@@ -34,9 +34,9 @@ scm migrate-to-git -r <uri> -u <username> -P <password> -m <migration.properties
 
 ### Eclipse requirements
 In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` as your first
-step. Then unpack a SCM Tools as downloaded into the Eclipse workspace directory. As soon you have done this step you are able to import also 
-the target platform definition as defined in the `rtc2git.target` file. If that has been made and the current target platform is set to the
-imported one, the  actual `rtc2git.cli.extension` project can be imported.
+step. Then unpack a SCM Tools as downloaded into the Eclipse workspace directory. As soon you have done this step you are able to import the actual 
+`rtc2git.cli.extension` project. When you got compile errors, make sure to
+select *rtc2git* as your default Target Platform.
 
 
 ## Wiki
