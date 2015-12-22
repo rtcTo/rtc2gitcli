@@ -72,12 +72,14 @@ public class MigrateToGitTest {
 		private Properties readProperties(ICommandLine subargs) {
 			final Properties props = new Properties();
 			try {
-				FileInputStream in = new FileInputStream(
-						subargs.getOption(MigrateToGitOptions.OPT_MIGRATION_PROPERTIES));
-				try {
-					props.load(in);
-				} finally {
-					in.close();
+				if (subargs.hasOption(MigrateToGitOptions.OPT_MIGRATION_PROPERTIES)) {
+					FileInputStream in = new FileInputStream(
+							subargs.getOption(MigrateToGitOptions.OPT_MIGRATION_PROPERTIES));
+					try {
+						props.load(in);
+					} finally {
+						in.close();
+					}
 				}
 			} catch (IOException e) {
 				throw new RuntimeException("Unable to read migration properties", e);

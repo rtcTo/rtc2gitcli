@@ -6,9 +6,9 @@ package to.rtc.cli.migrate.git;
 import to.rtc.cli.migrate.MigrateToOptions;
 
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.IOptionKey;
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.NamedOptionDefinition;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.OptionKey;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
-import com.ibm.team.rtc.cli.infrastructure.internal.parser.PositionalOptionDefinition;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
 
 /**
@@ -24,8 +24,8 @@ public class MigrateToGitOptions extends MigrateToOptions {
 		Options options = super.getOptions();
 
 		// rtc2git migration properties
-		options.addOption(new PositionalOptionDefinition(OPT_MIGRATION_PROPERTIES, "migration.properties", 1, 1), //$NON-NLS-1$
-				"path location of the migration.properties file.");
+		options.addOption(new NamedOptionDefinition(OPT_MIGRATION_PROPERTIES, "m", "migrationProperties", 1),
+				"File with migration properties.");
 		return options;
 	}
 

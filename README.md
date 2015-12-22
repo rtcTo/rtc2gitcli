@@ -16,7 +16,7 @@ It is implemented as scm cli plugin.
 - open shell or cmd
 - step into the target directory
 - scm load -r <uri> -u <username> -P password DESTINATION_WORKSPACE_NAME
-- scm migrate-to-git [options] SOURCE_WORKSPACE_NAME DESTINATION_WORKSPACE_NAME (options are -r uri, -u username, -P password)
+- scm migrate-to-git [options] SOURCE_WORKSPACE_NAME DESTINATION_WORKSPACE_NAME (options are -r uri, -u username, -P password, -t timeout, -m migration.properties)
 
 
 ## How does it work?
