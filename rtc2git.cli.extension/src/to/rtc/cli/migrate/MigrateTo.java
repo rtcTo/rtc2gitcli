@@ -1,6 +1,7 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,6 +38,7 @@ import com.ibm.team.repository.client.ITeamRepository;
 import com.ibm.team.repository.common.TeamRepositoryException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.ISubcommand;
+import com.ibm.team.rtc.cli.infrastructure.internal.core.LocalContext;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.scm.client.IWorkspaceConnection;
 import com.ibm.team.scm.client.IWorkspaceManager;
@@ -51,10 +53,10 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
-	private DateTimeStreamOutput output;
+	private StreamOutput output;
 
 	private IProgressMonitor getMonitor() {
-		return new LogTaskMonitor(new DateTimeStreamOutput(config.getContext().stdout()));
+		return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
 	}
 
 	public abstract Migrator getMigrator();
@@ -62,7 +64,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 	@Override
 	public void run() throws FileSystemException {
 		long start = System.currentTimeMillis();
-		output = new DateTimeStreamOutput(config.getContext().stdout());
+		setStdOut();
+		output = new StreamOutput(config.getContext().stdout());
 
 		try {
 			// Consume the command-line
@@ -139,6 +142,18 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			throw new RuntimeException(t);
 		} finally {
 			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
+		}
+	}
+
+	private void setStdOut() {
+		Class<?> c = LocalContext.class;
+		Field subargs;
+		try {
+			subargs = c.getDeclaredField("stdout");
+			subargs.setAccessible(true);
+			subargs.set(config.getContext(), new LoggingPrintStream(config.getContext().stdout()));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -254,11 +269,11 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine(subTask + " [" + getPercent() + "%]");
 		}
 
-		private String getPercent() {
+		private int getPercent() {
 			if (total <= 0) {
-				return "n/a";
+				return -1;
 			}
-			return String.valueOf(done * 100 / total);
+			return done * 100 / total;
 		}
 
 		@Override
