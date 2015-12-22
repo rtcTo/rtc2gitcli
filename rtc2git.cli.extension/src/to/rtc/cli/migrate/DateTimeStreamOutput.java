@@ -4,9 +4,9 @@ import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogStreamOutput;
+import com.ibm.team.filesystem.rcp.core.internal.changelog.AbstractDateTimeStreamOutput;
 
-public class DateTimeStreamOutput extends ChangeLogStreamOutput {
+public class DateTimeStreamOutput extends AbstractDateTimeStreamOutput {
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	public DateTimeStreamOutput(PrintStream out) {

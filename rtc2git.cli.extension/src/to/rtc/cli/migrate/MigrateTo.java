@@ -48,6 +48,8 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
+	private DateTimeStreamOutput output;
+
 	private IProgressMonitor getMonitor() {
 		return new NullProgressMonitor();
 	}
@@ -57,74 +59,79 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 	@Override
 	public void run() throws FileSystemException {
 		long start = System.currentTimeMillis();
+		output = new DateTimeStreamOutput(config.getContext().stdout());
 
-		// Consume the command-line
-		ICommandLine subargs = config.getSubcommandCommandLine();
-		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
+		try {
+			// Consume the command-line
+			ICommandLine subargs = config.getSubcommandCommandLine();
 
-		int timeout = 900;
-		if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
-			String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT).getValue();
-			timeout = Integer.valueOf(timeoutOptionValue);
-		}
-
-		final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
-				subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
-		SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-		final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-				subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
-		SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
-
-		// Initialize connection to RTC
-		output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
-		IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
-		ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
-		repo.setConnectionTimeout(timeout);
-
-		IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
-		IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
-				config);
-
-		// compare destination workspace with stream of source workspace to get
-		// tagging information
-		output.writeLine("Get full history information from RTC. This could take a large amount of time.");
-		List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
-		Collections.sort(tags, new TagCreationDateComparator());
-
-		final File sandboxDirectory;
-		output.writeLine("Start migration of tags.");
-		if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
-			sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
-		} else {
-			sandboxDirectory = new File(System.getProperty("user.dir"));
-		}
-		Migrator migrator = getMigrator();
-		migrator.init(sandboxDirectory);
-
-		RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
-		boolean isFirstTag = true;
-		int numberOfTags = tags.size();
-		for (RtcTag tag : tags) {
-			if (isFirstTag && tag.isEmpty()) {
-				output.writeLine("Ignore first empty tag, as we cannot accept baselines");
-				break;
+			int timeout = 900;
+			if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
+				String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)
+						.getValue();
+				timeout = Integer.valueOf(timeoutOptionValue);
 			}
-			isFirstTag = false;
-			final long startTag = System.currentTimeMillis();
-			int tagCounter = 0;
-			output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/" + numberOfTags
-					+ "]");
-			try {
-				rtcMigrator.migrateTag(tag);
-				tagCounter++;
-			} catch (CLIClientException e) {
-				e.printStackTrace();
-				throw new RuntimeException(e);
+
+			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
+					subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+			SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
+			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
+					subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+			SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
+
+			// Initialize connection to RTC
+			output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
+			IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
+			ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
+			repo.setConnectionTimeout(timeout);
+
+			IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
+			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
+					config);
+
+			// compare destination workspace with stream of source workspace to
+			// get
+			// tagging information
+			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
+			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
+			Collections.sort(tags, new TagCreationDateComparator());
+
+			final File sandboxDirectory;
+			output.writeLine("Start migration of tags.");
+			if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
+				sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
+			} else {
+				sandboxDirectory = new File(System.getProperty("user.dir"));
 			}
-			output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
-					+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
+			Migrator migrator = getMigrator();
+			migrator.init(sandboxDirectory);
+
+			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator);
+			boolean isFirstTag = true;
+			int numberOfTags = tags.size();
+			for (RtcTag tag : tags) {
+				if (isFirstTag && tag.isEmpty()) {
+					output.writeLine("Ignore first empty tag, as we cannot accept baselines");
+					break;
+				}
+				isFirstTag = false;
+				final long startTag = System.currentTimeMillis();
+				int tagCounter = 0;
+				output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/"
+						+ numberOfTags + "]");
+				try {
+					rtcMigrator.migrateTag(tag);
+					tagCounter++;
+				} catch (CLIClientException e) {
+					e.printStackTrace(output.getOutputStream());
+					throw new RuntimeException(e);
+				}
+				output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
+						+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
+			}
+		} finally {
+			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 		}
-		output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 	}
 
 	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
@@ -147,14 +154,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 				lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
 			}
 		} catch (TeamRepositoryException e) {
-			e.printStackTrace();
+			e.printStackTrace(output.getOutputStream());
 		}
 		return lastChangeSets;
 	}
 
 	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
-
-		DateTimeStreamOutput output = new DateTimeStreamOutput(config.getContext().stdout());
 
 		SnapshotSyncReport syncReport;
 		List<RtcTag> tagMap = new ArrayList<RtcTag>();
@@ -192,7 +197,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			tagMap = visitor.acceptInto(changelog);
 
 		} catch (TeamRepositoryException e) {
-			e.printStackTrace();
+			e.printStackTrace(output.getOutputStream());
 		}
 		return tagMap;
 	}
