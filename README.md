@@ -1,39 +1,43 @@
 # rtc2gitcli
-rtc2git written as scm cli plugin
-
-# rtc2gitcli
 A tool made for migrating code from an existing [RTC] (https://jazz.net/products/rational-team-concert/) SCM repository into a Git repository.
-Inspired by [rtc2git](https://github.com/rtcTo/rtc2git), but written in Java and hopefully faster.
-It is implemented as scm cli plugin.
+Inspired by [rtc2git](https://github.com/rtcTo/rtc2git), but written in Java and hopefully faster. It is implemented as scm cli plugin.
+
 
 ## Prerequirements
 - **[SCM Tools](https://jazz.net/downloads/rational-team-concert/releases/5.0.1?p=allDownloads)** from IBM. To avoid an account creation on jazz.net site, you could use [bugmenot](http://bugmenot.com/) (see also wiki page [configure RTC CLI] (https://github.com/rtcTo/rtc2git/wiki/configure-RTC-CLI))
 - Eclipse configured with scm tools as target platform (see wiki [configure scm tools target platform](https://github.com/rtcTo/rtc2gitcli/wiki/configure-target-platform))
 
 ## Usage
-- create an RTC workspace with flow target and components as wanted --> SOURCE_WORKSPACE_NAME
-- create an RTC workspace with SOURCE_WORKPSACE_NAME as flow target --> DESTINTION_WORKSPACE_NAME
+- create an source RTC workspace with flow target and components as wanted --> *SOURCE_WORKSPACE*
+- create an target RTC workspace with *SOURCE_WORKPSACE* as flow target --> *TARGET_WORKSPACE*
 - open shell or cmd
 - step into the target directory
-- scm load -r <uri> -u <username> -P password DESTINATION_WORKSPACE_NAME
-- scm migrate-to-git [options] SOURCE_WORKSPACE_NAME DESTINATION_WORKSPACE_NAME (options are -r uri, -u username, -P password, -t timeout, -m migration.properties)
+- load the initial target workspace:
 
+```
+scm load -r <uri> -u <username> -P <password> <TARGET_WORKSPACE>
+```
+
+- execute the actual migration:
+
+```
+scm migrate-to-git -r <uri> -u <username> -P <password> -m <migration.properties> <SOURCE_WORKSPACE> <TARGET_WORKSPACE>
+```
 
 ## How does it work?
 1. It initalizes an empty git repository and clones it
-2. In this repository, it loads TARGET_WORKSPACE_NAME rtc workspace
+2. In this repository, it loads *TARGET_WORKSPACE* rtc workspace
 3. Every change set is accepted
 4. If there is a baseline on the change set, a tag is created on git
 5. The change set is committed to git
 
 
-## Contribute
-We welcome any feedback! :)
+### Eclipse requirements
+In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` as your first
+step. Then unpack a SCM Tools as downloaded into the Eclipse workspace directory. As soon you have done this step you are able to import also 
+the target platform definition as defined in the `rtc2git.target` file. If that has been made and the current target platform is set to the
+imported one, the  actual `rtc2git.cli.extension` project can be imported.
 
-### Eclipse prerequirements
-In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` file prior importing the actual `rtc2git.cli.extension` project.
-
-Feel free to report and/or fix [issues](https://github.com/rtcTo/rtc2gitcli/issues) or create new pull requests
 
 ## Wiki
 For more details [visit our wiki] (https://github.com/rtcTo/rtc2gitcli/wiki)
@@ -42,3 +46,6 @@ For more details [visit our wiki] (https://github.com/rtcTo/rtc2gitcli/wiki)
 - [api docs] (http://download.eclipse.org/jgit/docs/jgit-3.3.0.201403021825-r/apidocs/?d)
 - [jgit cookbook] (https://github.com/centic9/jgit-cookbook)
 - [User Guide] (http://wiki.eclipse.org/JGit/User_Guide)
+
+## Contribute & Feedback
+Feel free to report and/or fix [issues](https://github.com/rtcTo/rtc2gitcli/issues) or create new pull requests
