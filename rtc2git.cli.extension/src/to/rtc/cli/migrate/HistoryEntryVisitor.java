@@ -108,7 +108,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	private RtcTag getTag(ChangeLogBaselineEntryDTO dto) {
 		for (RtcTag tag : tags) {
 			if (dto.getEntryName().equals(tag.getName())) {
-				if (tag.getCreationDate() < dto.getCreationDate()) {
+				if (tag.getCreationDate() > dto.getCreationDate()) {
 					tag.setCreationDate(dto.getCreationDate());
 				}
 				return tag;
