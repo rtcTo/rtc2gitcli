@@ -129,6 +129,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 				output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
 						+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
 			}
+		} catch (Throwable t) {
+			t.printStackTrace(output.getOutputStream());
+			throw new RuntimeException(t);
 		} finally {
 			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 		}
