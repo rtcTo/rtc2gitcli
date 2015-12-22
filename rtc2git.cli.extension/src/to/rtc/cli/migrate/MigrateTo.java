@@ -3,9 +3,11 @@ package to.rtc.cli.migrate;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -96,6 +98,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 			Collections.sort(tags, new TagCreationDateComparator());
 
+			logTagInfos(tags);
+
 			final File sandboxDirectory;
 			output.writeLine("Start migration of tags.");
 			if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
@@ -135,6 +139,19 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		} finally {
 			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 		}
+	}
+
+	private void logTagInfos(List<RtcTag> tags) {
+		output.writeLine("********** BASELINE INFOS **********");
+		for (RtcTag tag : tags) {
+			output.writeLine("  Baseline [" + tag.getName() + "] created at [" + (new Date(tag.getCreationDate()))
+					+ "] total number of changesets [" + tag.getOrderedChangeSets().size() + "]");
+			for (Entry<String, List<RtcChangeSet>> entry : tag.getComponentsChangeSets().entrySet()) {
+				output.writeLine("      number of changesets  for component [" + entry.getKey() + "] is ["
+						+ entry.getValue().size() + "]");
+			}
+		}
+		output.writeLine("********** BASELINE INFOS **********");
 	}
 
 	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
