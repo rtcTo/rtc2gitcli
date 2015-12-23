@@ -25,6 +25,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.storage.file.WindowCacheConfig;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -377,6 +378,63 @@ public class GitMigratorTest {
 		SortedSet<String> stillExistingFiles = migrator.getExistingIgnoredFiles();
 
 		assertEquals(expected, stillExistingFiles);
+	}
+
+	@Test
+	public void testParseConfigValue() {
+		assertEquals(1, migrator.parseConfigValue(null, 1));
+		assertEquals(1, migrator.parseConfigValue("", 1));
+		assertEquals(1, migrator.parseConfigValue(" ", 1));
+		assertEquals(2, migrator.parseConfigValue("2", 1));
+		assertEquals(1024, migrator.parseConfigValue("1k", 1));
+		assertEquals(1024, migrator.parseConfigValue("1K", 1));
+		assertEquals(1024, migrator.parseConfigValue("1 kB", 1));
+		assertEquals(1024, migrator.parseConfigValue("1  KB", 1));
+		assertEquals(2097152, migrator.parseConfigValue("2 m", 1));
+		assertEquals(2097152, migrator.parseConfigValue("2  M", 1));
+		assertEquals(2097152, migrator.parseConfigValue("2mb", 1));
+		assertEquals(2097152, migrator.parseConfigValue("2MB", 1));
+	}
+
+	@Test
+	public void testGetGitCacheConfig_defaults() throws Exception {
+		// check values
+		WindowCacheConfig cfg = migrator.getWindowCacheConfig();
+		assertEquals(128, cfg.getPackedGitOpenFiles());
+		assertEquals(10 * WindowCacheConfig.MB, cfg.getPackedGitLimit());
+		assertEquals(8 * WindowCacheConfig.KB, cfg.getPackedGitWindowSize());
+		assertFalse(cfg.isPackedGitMMAP());
+		assertEquals(10 * WindowCacheConfig.MB, cfg.getDeltaBaseCacheLimit());
+		assertEquals(50 * WindowCacheConfig.MB, cfg.getStreamFileThreshold());
+	}
+
+	@Test
+	public void testGetGitCacheConfig() throws Exception {
+		props.setProperty("packedgitopenfiles", "129");
+		props.setProperty("packedgitlimit", "11m");
+		props.setProperty("packedgitwindowsize", "9k");
+		props.setProperty("packedgitmmap", "true");
+		props.setProperty("deltabasecachelimit", "11m");
+		props.setProperty("streamfilethreshold", "51m");
+		migrator.initialize(props);
+		// check values
+		WindowCacheConfig cfg = migrator.getWindowCacheConfig();
+		assertEquals(129, cfg.getPackedGitOpenFiles());
+		assertEquals(11 * WindowCacheConfig.MB, cfg.getPackedGitLimit());
+		assertEquals(9 * WindowCacheConfig.KB, cfg.getPackedGitWindowSize());
+		assertTrue(cfg.isPackedGitMMAP());
+		assertEquals(11 * WindowCacheConfig.MB, cfg.getDeltaBaseCacheLimit());
+		assertEquals(51 * WindowCacheConfig.MB, cfg.getStreamFileThreshold());
+	}
+
+	@Test
+	public void testGetMaxFileThresholdValue_maxOneFirthOfHeap() {
+		assertEquals(10000, migrator.getMaxFileThresholdValue(12000, 40000));
+	}
+
+	@Test
+	public void testGetMaxFileThresholdValue_lessOrEqulalMaxArraySize() {
+		assertEquals(Integer.MAX_VALUE, migrator.getMaxFileThresholdValue(Integer.MAX_VALUE, Long.MAX_VALUE));
 	}
 
 	//

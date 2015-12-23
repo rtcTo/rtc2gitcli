@@ -26,6 +26,7 @@ import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.StoredConfig;
+import org.eclipse.jgit.storage.file.WindowCacheConfig;
 
 import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.ChangeSet.WorkItem;
@@ -44,9 +45,11 @@ public final class GitMigrator implements Migrator {
 	static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata");
 	static final Pattern GITIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.gitignore$");
 	static final Pattern JAZZIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.jazzignore$");
+	static final Pattern VALUE_PATTERN = Pattern.compile("^([0-9]+) *(m|mb|k|kb|)$", Pattern.CASE_INSENSITIVE);
 
 	private final Charset defaultCharset;
 	private final Set<String> ignoredFileExtensions;
+	private final WindowCacheConfig WindowCacheConfig;
 
 	private Git git;
 	private Properties properties;
@@ -56,6 +59,7 @@ public final class GitMigrator implements Migrator {
 	public GitMigrator(Properties properties) {
 		defaultCharset = Charset.forName("UTF-8");
 		ignoredFileExtensions = new HashSet<String>();
+		WindowCacheConfig = new WindowCacheConfig();
 		initialize(properties);
 	}
 
@@ -113,6 +117,10 @@ public final class GitMigrator implements Migrator {
 
 	Set<String> getIgnoredFileExtensions() {
 		return ignoredFileExtensions;
+	}
+
+	WindowCacheConfig getWindowCacheConfig() {
+		return WindowCacheConfig;
 	}
 
 	String getWorkItemNumbers(List<WorkItem> workItems) {
@@ -291,11 +299,55 @@ public final class GitMigrator implements Migrator {
 		config.save();
 	}
 
+	private int getFactor(String sign) {
+		if (!sign.isEmpty()) {
+			switch (sign.charAt(0)) {
+			case 'k':
+			case 'K':
+				return org.eclipse.jgit.storage.file.WindowCacheConfig.KB;
+			case 'm':
+			case 'M':
+				return org.eclipse.jgit.storage.file.WindowCacheConfig.MB;
+			}
+		}
+		return 1;
+	}
+
+	long parseConfigValue(String value, long defaultValue) {
+		if (value != null) {
+			Matcher matcher = VALUE_PATTERN.matcher(value.trim());
+			if (matcher.matches()) {
+				return getFactor(matcher.group(2)) * Integer.parseInt(matcher.group(1));
+			}
+		}
+		return defaultValue;
+	}
+
 	void initialize(Properties props) {
 		properties = props;
 		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
 				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
+		// update window cache config
+		WindowCacheConfig cfg = getWindowCacheConfig();
+		cfg.setPackedGitOpenFiles(
+				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
+		cfg.setPackedGitWindowSize(
+				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
+		cfg.setDeltaBaseCacheLimit(
+				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
+		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
+		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
+	}
+
+	int getMaxFileThresholdValue(long configThreshold, final long maxMem) {
+		// don't use more than 1/4 of the heap
+		configThreshold = Math.min(configThreshold, maxMem / 4);
+		// cannot exceed array length
+		configThreshold = Math.min(configThreshold, Integer.MAX_VALUE);
+		return (int) configThreshold;
 	}
 
 	String createTagName(String tagName) {
@@ -314,6 +366,7 @@ public final class GitMigrator implements Migrator {
 			} else {
 				throw new RuntimeException(bareGitDirectory + " does not exist");
 			}
+			getWindowCacheConfig().install();
 			initRootGitignore(sandboxRootDirectory);
 			initRootGitattributes(sandboxRootDirectory);
 			initConfig();
@@ -328,7 +381,13 @@ public final class GitMigrator implements Migrator {
 	@Override
 	public void close() {
 		if (git != null) {
-			git.close();
+			try {
+				git.gc().call();
+			} catch (GitAPIException e) {
+				e.printStackTrace();
+			} finally {
+				git.close();
+			}
 		}
 		SortedSet<String> existingIgnoredFiles = getExistingIgnoredFiles();
 		if (!existingIgnoredFiles.isEmpty()) {
