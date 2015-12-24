@@ -8,6 +8,7 @@ import com.ibm.team.filesystem.cli.client.internal.subcommands.LoadCmdOptions;
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
+import com.ibm.team.filesystem.client.FileSystemException;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
@@ -36,7 +37,16 @@ public class LoadCommandDelegate extends RtcCommandDelegate {
 			boolean force) {
 		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
 		String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
-		String password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
+		String password;
+		if (config.getSubcommandCommandLine().hasOption(CommonOptions.OPT_PASSWORD)) {
+			password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
+		} else {
+			try {
+				password = config.getConnectionInfo().getPassword();
+			} catch (FileSystemException e) {
+				throw new RuntimeException("Unable to get password", e);
+			}
+		}
 		setSubCommandLine(config, generateCommandLine(uri, username, password, workspace, component, force));
 	}
 
