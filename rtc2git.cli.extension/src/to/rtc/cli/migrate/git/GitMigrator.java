@@ -317,7 +317,7 @@ public final class GitMigrator implements Migrator {
 		if (value != null) {
 			Matcher matcher = VALUE_PATTERN.matcher(value.trim());
 			if (matcher.matches()) {
-				return getFactor(matcher.group(2)) * Integer.parseInt(matcher.group(1));
+				return getFactor(matcher.group(2)) * Long.parseLong(matcher.group(1));
 			}
 		}
 		return defaultValue;
@@ -325,19 +325,19 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
-				props.getProperty("user.email", "rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
+				"rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 		// update window cache config
 		WindowCacheConfig cfg = getWindowCacheConfig();
-		cfg.setPackedGitOpenFiles(
-				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitOpenFiles((int) parseConfigValue(props.getProperty("packedgitopenfiles"),
+				cfg.getPackedGitOpenFiles()));
 		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
-		cfg.setPackedGitWindowSize(
-				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitWindowSize((int) parseConfigValue(props.getProperty("packedgitwindowsize"),
+				cfg.getPackedGitWindowSize()));
 		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
-		cfg.setDeltaBaseCacheLimit(
-				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
+		cfg.setDeltaBaseCacheLimit((int) parseConfigValue(props.getProperty("deltabasecachelimit"),
+				cfg.getDeltaBaseCacheLimit()));
 		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
 		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
 	}
