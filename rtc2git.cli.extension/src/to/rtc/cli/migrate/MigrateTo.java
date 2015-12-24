@@ -159,14 +159,18 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	private void logTagInfos(List<RtcTag> tags) {
 		output.writeLine("********** BASELINE INFOS **********");
+		int totalChangeSets = 0;
 		for (RtcTag tag : tags) {
+			int totalChangeSetsByBaseline = tag.getOrderedChangeSets().size();
+			totalChangeSets += totalChangeSetsByBaseline;
 			output.writeLine("  Baseline [" + tag.getName() + "] created at [" + (new Date(tag.getCreationDate()))
-					+ "] total number of changesets [" + tag.getOrderedChangeSets().size() + "]");
+					+ "] total number of changesets [" + totalChangeSetsByBaseline + "]");
 			for (Entry<String, List<RtcChangeSet>> entry : tag.getComponentsChangeSets().entrySet()) {
 				output.writeLine("      number of changesets  for component [" + entry.getKey() + "] is ["
 						+ entry.getValue().size() + "]");
 			}
 		}
+		output.writeLine("TOTAL NUMBER OF CHANGESETS [" + totalChangeSets + "]");
 		output.writeLine("********** BASELINE INFOS **********");
 	}
 
