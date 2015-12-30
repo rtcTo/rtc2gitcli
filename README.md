@@ -10,6 +10,7 @@ Inspired by [rtc2git](https://github.com/rtcTo/rtc2git), but written in Java and
 ## Usage
 - create an source RTC workspace with flow target and components as wanted --> *SOURCE_WORKSPACE*
 - create an target RTC workspace with *SOURCE_WORKPSACE* as flow target --> *TARGET_WORKSPACE*
+- check comments at [configure rtc workspaces](https://github.com/rtcTo/rtc2gitcli/wiki/configure-rtc-workspaces)
 - open shell or cmd
 - step into the target directory
 - load the initial target workspace:
