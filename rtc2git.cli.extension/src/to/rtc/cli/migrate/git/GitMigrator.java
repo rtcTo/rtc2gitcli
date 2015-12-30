@@ -55,11 +55,13 @@ public final class GitMigrator implements Migrator {
 	private Properties properties;
 	private PersonIdent defaultIdent;
 	private File rootDir;
+	private int commitsAfterClean;
 
 	public GitMigrator(Properties properties) {
 		defaultCharset = Charset.forName("UTF-8");
 		ignoredFileExtensions = new HashSet<String>();
 		WindowCacheConfig = new WindowCacheConfig();
+		commitsAfterClean = 0;
 		initialize(properties);
 	}
 
@@ -201,11 +203,24 @@ public final class GitMigrator implements Migrator {
 			if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
 				git.commit().setMessage(comment).setAuthor(ident).setCommitter(ident).call();
 			}
+
+			++commitsAfterClean;
 		} catch (RuntimeException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to commit changes", e);
 		}
+	}
+
+	@Override
+	public boolean needsIntermediateCleanup() {
+		return commitsAfterClean >= 1000;
+	}
+
+	@Override
+	public void intermediateCleanup() {
+		runGitGc();
+		commitsAfterClean = 0;
 	}
 
 	private Set<String> handleRemoved(Status status, Set<String> toRestore) {
@@ -325,19 +340,19 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
-				"rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 		// update window cache config
 		WindowCacheConfig cfg = getWindowCacheConfig();
-		cfg.setPackedGitOpenFiles((int) parseConfigValue(props.getProperty("packedgitopenfiles"),
-				cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitOpenFiles(
+				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
 		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
-		cfg.setPackedGitWindowSize((int) parseConfigValue(props.getProperty("packedgitwindowsize"),
-				cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitWindowSize(
+				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
 		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
-		cfg.setDeltaBaseCacheLimit((int) parseConfigValue(props.getProperty("deltabasecachelimit"),
-				cfg.getDeltaBaseCacheLimit()));
+		cfg.setDeltaBaseCacheLimit(
+				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
 		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
 		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
 	}
@@ -381,13 +396,7 @@ public final class GitMigrator implements Migrator {
 	@Override
 	public void close() {
 		if (git != null) {
-			try {
-				git.gc().call();
-			} catch (GitAPIException e) {
-				e.printStackTrace();
-			} finally {
-				git.close();
-			}
+			runGitGc();
 		}
 		SortedSet<String> existingIgnoredFiles = getExistingIgnoredFiles();
 		if (!existingIgnoredFiles.isEmpty()) {
@@ -395,6 +404,16 @@ public final class GitMigrator implements Migrator {
 			for (String existingIgnoredEntry : existingIgnoredFiles) {
 				System.err.println(existingIgnoredEntry);
 			}
+		}
+	}
+
+	private void runGitGc() {
+		try {
+			git.gc().call();
+		} catch (GitAPIException e) {
+			e.printStackTrace();
+		} finally {
+			git.close();
 		}
 	}
 

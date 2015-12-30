@@ -26,4 +26,8 @@ public interface Migrator {
 
 	void commitChanges(ChangeSet changeSet);
 
+	void intermediateCleanup();
+
+	boolean needsIntermediateCleanup();
+
 }

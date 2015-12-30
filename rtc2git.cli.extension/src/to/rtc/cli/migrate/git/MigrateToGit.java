@@ -12,7 +12,7 @@ import com.ibm.team.filesystem.client.FileSystemException;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 
 public class MigrateToGit extends MigrateTo {
-	private GitMigrator migratorImplementation;
+	private Migrator migratorImplementation;
 
 	@Override
 	public void run() throws FileSystemException {

@@ -3,14 +3,15 @@ package to.rtc.cli.migrate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import to.rtc.cli.migrate.command.AcceptCommandDelegate;
-import to.rtc.cli.migrate.command.LoadCommandDelegate;
+import java.util.concurrent.TimeUnit;
 
 import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
+
+import to.rtc.cli.migrate.command.AcceptCommandDelegate;
+import to.rtc.cli.migrate.command.LoadCommandDelegate;
 
 public class RtcMigrator {
 
@@ -43,6 +44,12 @@ public class RtcMigrator {
 			output.writeLine("Migrated [" + tagName + "] [" + changeSetCounter + "]/[" + numberOfChangesets
 					+ "] changesets. Accept took " + acceptDuration + "ms commit took "
 					+ (System.currentTimeMillis() - startCommit) + "ms");
+			if (migrator.needsIntermediateCleanup()) {
+				long startCleanup = System.currentTimeMillis();
+				migrator.intermediateCleanup();
+				output.writeLine("Intermediate cleanup had ["
+						+ (TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startCleanup)) + "]sec");
+			}
 		}
 		if (!"HEAD".equals(tagName)) {
 			migrator.createTag(tag);
