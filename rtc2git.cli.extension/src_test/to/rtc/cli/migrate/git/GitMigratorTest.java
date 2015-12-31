@@ -326,19 +326,19 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGlobalIgnoredFilesAddedToRootGitIgnore() throws Exception {
-		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dll");
+		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dLL");
 		migrator.initialize(props);
 		migrator.init(basedir);
 
 		create(new File(basedir, "some.zip"));
 		create(new File(basedir, "subdir/some.jar"));
-		create(new File(basedir, "subdir/subsub/some.dll"));
+		create(new File(basedir, "subdir/subsub/some.dLL"));
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
 		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
 		checkAllLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
-				"/subdir/subsub/some.dll", "/some.zip", "/subdir/some.jar"));
+				"/subdir/subsub/some.dLL", "/some.zip", "/subdir/some.jar"));
 	}
 
 	@Test
