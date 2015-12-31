@@ -26,11 +26,8 @@ public class JazzignoreTranslator {
 	public static List<String> toGitignore(File jazzignore) {
 		List<String> gitignoreLines = new ArrayList<String>();
 		try {
-			List<String> jazzignoreLines = Files.readLines(jazzignore, Charset.defaultCharset()); // default
-																									// should
-																									// be
-																									// ok
-																									// here
+			// default charset should be ok here
+			List<String> jazzignoreLines = Files.readLines(jazzignore, Charset.defaultCharset());
 			String lineForRegex = "";
 			boolean needToTransform = false;
 			for (String line : jazzignoreLines) {

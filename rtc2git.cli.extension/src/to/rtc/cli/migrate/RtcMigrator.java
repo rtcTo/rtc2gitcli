@@ -77,7 +77,7 @@ public class RtcMigrator {
 			try {
 				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), true).run();
 				initiallyLoadedComponents.add(changeSet.getComponent());
-			} catch (CLIClientException e) {// ignore
+			} catch (CLIClientException e) { // ignore
 				throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace
 						+ "] before [scm migrate-to-git] command");
 			}
