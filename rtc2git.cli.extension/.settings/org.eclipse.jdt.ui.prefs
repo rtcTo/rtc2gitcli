@@ -1,3 +1,6 @@
 eclipse.preferences.version=1
+editor_save_participant_org.eclipse.jdt.ui.postsavelistener.cleanup=true
 formatter_profile=_Eclipse (rtccli)
 formatter_settings_version=12
+sp_cleanup.format_source_code=true
+sp_cleanup.organize_imports=true
