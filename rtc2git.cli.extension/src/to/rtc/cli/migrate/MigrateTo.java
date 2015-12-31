@@ -95,9 +95,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
 					config);
 
-			// compare destination workspace with stream of source workspace to
-			// get
-			// tagging information
+			// compare destination workspace with stream of source workspace to get tagging information
 			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
 			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
 			Collections.sort(tags, new TagCreationDateComparator());

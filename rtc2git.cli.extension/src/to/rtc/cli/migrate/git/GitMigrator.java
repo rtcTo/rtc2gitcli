@@ -231,8 +231,7 @@ public final class GitMigrator implements Migrator {
 			if (matcher.matches()) {
 				File jazzignore = new File(rootDir, matcher.group(1).concat(".jazzignore"));
 				if (jazzignore.exists()) {
-					// restore .gitignore files that where deleted if
-					// corresponding .jazzignore exists
+					// restore .gitignore files that where deleted if corresponding .jazzignore exists
 					toRestore.add(removed);
 					continue;
 				}
