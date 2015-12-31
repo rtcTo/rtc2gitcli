@@ -19,8 +19,7 @@ import org.junit.rules.TemporaryFolder;
 
 /**
  * @author patrick.reinhart
- * @see <a href="https://github.com/centic9/jgit-cookbook">https://github.com/
- *      centic9/jgit-cookbook</a>
+ * @see <a href="https://github.com/centic9/jgit-cookbook">https://github.com/ centic9/jgit-cookbook</a>
  */
 public class GitPlainTest {
 	@Rule

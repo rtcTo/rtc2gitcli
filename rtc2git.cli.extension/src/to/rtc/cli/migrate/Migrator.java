@@ -9,8 +9,7 @@ import java.io.File;
 public interface Migrator {
 
 	/**
-	 * Initializes the migration implementation with the given
-	 * <code>sandboxRootDirectory</code>.
+	 * Initializes the migration implementation with the given <code>sandboxRootDirectory</code>.
 	 *
 	 * @param sandboxRootDirectory
 	 *            the sand box root directory
