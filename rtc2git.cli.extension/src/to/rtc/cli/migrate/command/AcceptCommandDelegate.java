@@ -36,32 +36,33 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 			if (status != null) {
 				switch (status.getCode()) {
 				case Constants.STATUS_FAILURE:
-					output.writeLine(
-							"There was a [FAILURE]. We ignore that, because the following accepts should fix that");
+					printExceptionMessage("FAILURE", status);
 					return Constants.STATUS_FAILURE;
 				case Constants.STATUS_GAP:
-					output.writeLine(
-							"There was a [GAP]. We ignore that, because the following accepts should fix that");
+					printExceptionMessage("GAP", status);
 					return Constants.STATUS_GAP;
 				case Constants.STATUS_CONFLICT:
-					output.writeLine(
-							"There was a [CONFLICT]. We ignore that, because the following accepts should fix that");
+					printExceptionMessage("CONFLICT", status);
 					return Constants.STATUS_CONFLICT;
 				case Constants.STATUS_NWAY_CONFLICT:
-					output.writeLine(
-							"There was a [NWAY_CONFLICT]. We ignore that, because the following accepts should fix that");
+					printExceptionMessage("NWAY_CONFLICT", status);
 					return Constants.STATUS_NWAY_CONFLICT;
 				case Constants.STATUS_WORKSPACE_UNCHANGED:
-					output.writeLine(
-							"There was a [WORKSPACE_UNCHANGED]. We ignore that, because the following accepts should fix that");
+					printExceptionMessage("WORKSPACE_UNCHANGED", status);
 					return Constants.STATUS_WORKSPACE_UNCHANGED;
 				default:
-					output.writeLine("There was an unexpected exception with state [" + status.getCode() + "]");
+					output.writeLine("There was an unexpected exception with state [" + status.getCode() + "]("
+							+ status.getMessage() + ")");
 					break;
 				}
 			}
 			throw e;
 		}
+	}
+
+	void printExceptionMessage(String codeText, IStatus status) {
+		output.writeLine("There was a [" + codeText + "](" + status.getMessage()
+				+ "). We ignore that, because the following accepts should fix that");
 	}
 
 	@Override
