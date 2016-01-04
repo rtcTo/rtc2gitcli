@@ -1,5 +1,6 @@
 package to.rtc.cli.migrate;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -12,20 +13,28 @@ import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 
 import to.rtc.cli.migrate.command.AcceptCommandDelegate;
 import to.rtc.cli.migrate.command.LoadCommandDelegate;
+import to.rtc.cli.migrate.util.Files;
 
 public class RtcMigrator {
 
+	/**
+	 * 
+	 */
+	private static final int ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN = 1000;
 	protected final IChangeLogOutput output;
 	private final IScmClientConfiguration config;
 	private final String workspace;
 	private final Migrator migrator;
 	private static final Set<String> initiallyLoadedComponents = new HashSet<String>();
+	private File sandboxDirectory;
 
-	public RtcMigrator(IChangeLogOutput output, IScmClientConfiguration config, String workspace, Migrator migrator) {
+	public RtcMigrator(IChangeLogOutput output, IScmClientConfiguration config, String workspace, Migrator migrator,
+			File sandboxDirectory) {
 		this.output = output;
 		this.config = config;
 		this.workspace = workspace;
 		this.migrator = migrator;
+		this.sandboxDirectory = sandboxDirectory;
 	}
 
 	public void migrateTag(RtcTag tag) throws CLIClientException {
@@ -50,9 +59,23 @@ public class RtcMigrator {
 				output.writeLine("Intermediate cleanup had ["
 						+ (TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startCleanup)) + "]sec");
 			}
+			if (changeSetCounter % ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN == 0) {
+				cleanLocalHistory();
+			}
 		}
 		if (!"HEAD".equals(tagName)) {
 			migrator.createTag(tag);
+		}
+	}
+
+	private void cleanLocalHistory() {
+		File localHistoryDirectory = new File(sandboxDirectory,
+				".metadata/.plugins/org.eclipse.core.resources/.history");
+		if (localHistoryDirectory.exists() && localHistoryDirectory.isDirectory()) {
+			long start = System.currentTimeMillis();
+			Files.delete(localHistoryDirectory);
+			output.writeLine("Cleanup of local history had ["
+					+ (TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - start)) + "]sec");
 		}
 	}
 
