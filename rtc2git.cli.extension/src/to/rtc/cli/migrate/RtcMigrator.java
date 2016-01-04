@@ -43,21 +43,13 @@ public class RtcMigrator {
 		int numberOfChangesets = changeSets.size();
 		String tagName = tag.getName();
 		for (RtcChangeSet changeSet : changeSets) {
-			long startAccept = System.currentTimeMillis();
-			acceptAndLoadChangeSet(changeSet);
-			handleInitialLoad(changeSet);
-			long acceptDuration = System.currentTimeMillis() - startAccept;
-			long startCommit = System.currentTimeMillis();
-			migrator.commitChanges(changeSet);
+			long acceptDuration = accept(changeSet);
+			long commitDuration = commit(changeSet);
 			changeSetCounter++;
 			output.writeLine("Migrated [" + tagName + "] [" + changeSetCounter + "]/[" + numberOfChangesets
-					+ "] changesets. Accept took " + acceptDuration + "ms commit took "
-					+ (System.currentTimeMillis() - startCommit) + "ms");
+					+ "] changesets. Accept took " + acceptDuration + "ms commit took " + commitDuration + "ms");
 			if (migrator.needsIntermediateCleanup()) {
-				long startCleanup = System.currentTimeMillis();
-				migrator.intermediateCleanup();
-				output.writeLine("Intermediate cleanup had ["
-						+ (TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startCleanup)) + "]sec");
+				intermediateCleanup();
 			}
 			if (changeSetCounter % ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN == 0) {
 				cleanLocalHistory();
@@ -66,6 +58,28 @@ public class RtcMigrator {
 		if (!"HEAD".equals(tagName)) {
 			migrator.createTag(tag);
 		}
+	}
+
+	void intermediateCleanup() {
+		long startCleanup = System.currentTimeMillis();
+		migrator.intermediateCleanup();
+		output.writeLine("Intermediate cleanup had ["
+				+ (TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - startCleanup)) + "]sec");
+	}
+
+	long commit(RtcChangeSet changeSet) {
+		long startCommit = System.currentTimeMillis();
+		migrator.commitChanges(changeSet);
+		long commitDuration = System.currentTimeMillis() - startCommit;
+		return commitDuration;
+	}
+
+	long accept(RtcChangeSet changeSet) throws CLIClientException {
+		long startAccept = System.currentTimeMillis();
+		acceptAndLoadChangeSet(changeSet);
+		handleInitialLoad(changeSet);
+		long acceptDuration = System.currentTimeMillis() - startAccept;
+		return acceptDuration;
 	}
 
 	private void cleanLocalHistory() {
