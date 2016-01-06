@@ -55,6 +55,7 @@ public class RtcMigrator {
 				cleanLocalHistory();
 			}
 		}
+		cleanLocalHistory();
 		if (!"HEAD".equals(tagName)) {
 			migrator.createTag(tag);
 		}
