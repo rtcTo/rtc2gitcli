@@ -41,6 +41,7 @@ public class JazzignoreTranslatorTest {
 		lines.add("  {.idea} \\");
 		lines.add("  {.project} \\");
 		lines.add("  {.settings} \\");
+		lines.add("  {${buildDirectory\\}} \\"); // this line must be ignored
 		lines.add("  {bin} \\");
 		lines.add("  {dist} \\");
 		lines.add("  {a?c} \\"); // no next line after line continuation
