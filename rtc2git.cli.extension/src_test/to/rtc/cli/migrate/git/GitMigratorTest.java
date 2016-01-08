@@ -24,6 +24,7 @@ import java.util.TreeSet;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.WindowCacheConfig;
 import org.junit.After;
@@ -121,6 +122,20 @@ public class GitMigratorTest {
 
 		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
 		assertEquals(GitMigrator.ROOT_IGNORED_ENTRIES, Files.readLines(new File(basedir, ".gitignore"), cs));
+	}
+
+	@Test
+	public void testInit_GitConfig() throws Exception {
+		git = Git.init().setDirectory(basedir).call();
+		StoredConfig config = git.getRepository().getConfig();
+
+		migrator.init(basedir);
+
+		config.load();
+		assertFalse(config.getBoolean("core", null, "ignorecase", true));
+		assertEquals(File.separatorChar == '/' ? "input" : "true", config.getString("core", null, "autocrlf"));
+		assertEquals("simple", config.getString("push", null, "default"));
+		assertFalse(config.getBoolean("http", null, "sslverify", true));
 	}
 
 	@Test
