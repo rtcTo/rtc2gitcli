@@ -310,6 +310,9 @@ public final class GitMigrator implements Migrator {
 	private void initConfig() throws IOException {
 		StoredConfig config = git.getRepository().getConfig();
 		config.setBoolean("core", null, "ignoreCase", false);
+		config.setString("core", null, "autocrlf", File.separatorChar == '/' ? "input" : "true");
+		config.setBoolean("http", null, "sslverify", false);
+		config.setString("push", null, "default", "simple");
 		config.save();
 	}
 
