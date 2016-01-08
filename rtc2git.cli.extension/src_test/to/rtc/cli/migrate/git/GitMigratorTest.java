@@ -476,8 +476,7 @@ public class GitMigratorTest {
 	private void checkGit(String userName, String userEmail, String comment) throws Exception {
 		git = Git.open(basedir);
 		Status status = git.status().call();
-		assertTrue(status.getUncommittedChanges().isEmpty());
-		assertTrue(status.getUntracked().isEmpty());
+		assertTrue(status.isClean());
 		Iterator<RevCommit> log = git.log().call().iterator();
 		RevCommit revCommit = log.next();
 		assertEquals(userEmail, revCommit.getAuthorIdent().getEmailAddress());

@@ -5,11 +5,11 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 
-import to.rtc.cli.migrate.MigrateTo;
-import to.rtc.cli.migrate.Migrator;
-
 import com.ibm.team.filesystem.client.FileSystemException;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
+
+import to.rtc.cli.migrate.MigrateTo;
+import to.rtc.cli.migrate.Migrator;
 
 public class MigrateToGit extends MigrateTo {
 	private Migrator migratorImplementation;
@@ -47,7 +47,7 @@ public class MigrateToGit extends MigrateTo {
 		return trimProperties(props);
 	}
 
-	protected Properties trimProperties(Properties props) {
+	protected static Properties trimProperties(Properties props) {
 		Set<Object> keyset = props.keySet();
 		for (Object keyObject : keyset) {
 			String key = (String) keyObject;
