@@ -32,6 +32,7 @@ import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.ChangeSet.WorkItem;
 import to.rtc.cli.migrate.Migrator;
 import to.rtc.cli.migrate.Tag;
+import to.rtc.cli.migrate.util.CommitCommentTranslator;
 import to.rtc.cli.migrate.util.Files;
 import to.rtc.cli.migrate.util.JazzignoreTranslator;
 
@@ -51,11 +52,12 @@ public final class GitMigrator implements Migrator {
 	private final Set<String> ignoredFileExtensions;
 	private final WindowCacheConfig WindowCacheConfig;
 
+	private int commitsAfterClean;
 	private Git git;
 	private Properties properties;
 	private PersonIdent defaultIdent;
 	private File rootDir;
-	private int commitsAfterClean;
+	private CommitCommentTranslator commentTranslator;
 
 	public GitMigrator(Properties properties) {
 		defaultCharset = Charset.forName("UTF-8");
@@ -108,7 +110,8 @@ public final class GitMigrator implements Migrator {
 	}
 
 	String getCommitMessage(String workItemText, String comment) {
-		return String.format(properties.getProperty("commit.message.format", "%1s %2s"), workItemText, comment).trim();
+		return String.format(properties.getProperty("commit.message.format", "%1s %2s"), workItemText,
+				commentTranslator.translate(comment)).trim();
 	}
 
 	List<String> getGitattributeLines() {
@@ -342,6 +345,7 @@ public final class GitMigrator implements Migrator {
 
 	void initialize(Properties props) {
 		properties = props;
+		commentTranslator = new CommitCommentTranslator(props);
 		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
 				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
