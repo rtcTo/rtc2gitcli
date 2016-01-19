@@ -140,9 +140,11 @@ public class GitMigratorTest {
 
 	@Test
 	public void testGetCommitMessage() {
-		migrator.init(basedir);
+		props.setProperty("commit.message.regex.1", "^B([0-9]+): (.+)$");
+		props.setProperty("commit.message.replacement.1", "BUG-$1 $2");
+		migrator.initialize(props);
 
-		assertEquals("gugus gaga", migrator.getCommitMessage("gugus", "gaga"));
+		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga"));
 	}
 
 	@Test
