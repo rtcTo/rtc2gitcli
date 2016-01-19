@@ -6,20 +6,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import to.rtc.cli.migrate.command.AcceptCommandDelegate;
+import to.rtc.cli.migrate.command.LoadCommandDelegate;
+import to.rtc.cli.migrate.util.Files;
+
 import com.ibm.team.filesystem.cli.core.Constants;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 
-import to.rtc.cli.migrate.command.AcceptCommandDelegate;
-import to.rtc.cli.migrate.command.LoadCommandDelegate;
-import to.rtc.cli.migrate.util.Files;
-
 public class RtcMigrator {
 
 	/**
-	 * 
-	 */
+    *
+    */
 	private static final int ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN = 1000;
 	protected final IChangeLogOutput output;
 	private final IScmClientConfiguration config;
@@ -113,7 +113,7 @@ public class RtcMigrator {
 	private void handleInitialLoad(RtcChangeSet changeSet) {
 		if (!initiallyLoadedComponents.contains(changeSet.getComponent())) {
 			try {
-				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), true).run();
+				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), false).run();
 				initiallyLoadedComponents.add(changeSet.getComponent());
 			} catch (CLIClientException e) { // ignore
 				throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace
