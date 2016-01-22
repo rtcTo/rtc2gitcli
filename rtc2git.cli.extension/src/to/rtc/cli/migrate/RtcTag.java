@@ -144,7 +144,7 @@ final class RtcTag implements Tag {
 		return false;
 	}
 
-	private String getOriginalName() {
+	String getOriginalName() {
 		return originalName;
 	}
 }
