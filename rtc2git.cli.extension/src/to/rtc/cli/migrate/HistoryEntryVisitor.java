@@ -106,16 +106,17 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	}
 
 	private RtcTag getTag(ChangeLogBaselineEntryDTO dto) {
-		for (RtcTag tag : tags) {
-			if (dto.getEntryName().equals(tag.getName())) {
-				if (tag.getCreationDate() > dto.getCreationDate()) {
-					tag.setCreationDate(dto.getCreationDate());
-				}
-				return tag;
+		long creationDate = dto.getCreationDate();
+		RtcTag tag = new RtcTag(dto.getItemId()).setCreationDate(creationDate).setOriginalName(dto.getEntryName());
+		if (tags.contains(tag)) {
+			tag = tags.get(tags.indexOf(tag));
+			tag.makeNameUnique();
+			if (tag.getCreationDate() > creationDate) {
+				tag.setCreationDate(creationDate);
 			}
+		} else {
+			tags.add(tag);
 		}
-		RtcTag tag = new RtcTag(dto.getItemId()).setCreationDate(dto.getCreationDate()).setName(dto.getEntryName());
-		tags.add(tag);
 		return tag;
 	}
 
@@ -125,7 +126,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 				return tag;
 			}
 		}
-		RtcTag tag = new RtcTag(null).setName(name).setCreationDate(Long.MAX_VALUE);
+		RtcTag tag = new RtcTag(null).setOriginalName(name).setCreationDate(Long.MAX_VALUE);
 		tags.add(tag);
 		return tag;
 	}

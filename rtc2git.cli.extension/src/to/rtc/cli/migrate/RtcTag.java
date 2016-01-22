@@ -9,9 +9,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 final class RtcTag implements Tag {
 
+	/**
+    *
+    */
+	private static final int TIME_DIFFERENCE_PLUS_MINUS_SECONDS = 5;
 	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("").setCreationDate(Long.MAX_VALUE);
 	private final String uuid;
-	private String name;
+	private String originalName;
+	private boolean makeNameUnique;
 	private long creationDate;
 	private final Map<String, List<RtcChangeSet>> components;
 	private long totalChangeSetCount;
@@ -20,6 +25,7 @@ final class RtcTag implements Tag {
 		this.uuid = uuid;
 		components = new HashMap<String, List<RtcChangeSet>>();
 		totalChangeSetCount = 0;
+		makeNameUnique = false;
 	}
 
 	RtcTag setCreationDate(long creationDate) {
@@ -27,8 +33,8 @@ final class RtcTag implements Tag {
 		return this;
 	}
 
-	RtcTag setName(String name) {
-		this.name = name;
+	RtcTag setOriginalName(String originalName) {
+		this.originalName = originalName;
 		return this;
 	}
 
@@ -85,7 +91,11 @@ final class RtcTag implements Tag {
 
 	@Override
 	public String getName() {
-		return name;
+		if (makeNameUnique) {
+			return originalName + "_" + creationDate / 1000;
+		} else {
+			return originalName;
+		}
 	}
 
 	@Override
@@ -95,5 +105,46 @@ final class RtcTag implements Tag {
 
 	public boolean isEmpty() {
 		return totalChangeSetCount <= 0;
+	}
+
+	public void makeNameUnique() {
+		makeNameUnique = true;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((components == null) ? 0 : components.hashCode());
+		result = prime * result + (int) (creationDate ^ (creationDate >>> 32));
+		result = prime * result + (makeNameUnique ? 1231 : 1237);
+		result = prime * result + ((originalName == null) ? 0 : originalName.hashCode());
+		result = prime * result + (int) (totalChangeSetCount ^ (totalChangeSetCount >>> 32));
+		result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (obj.getClass() == getClass()) {
+			RtcTag tag = (RtcTag) obj;
+			long objCreationDate = tag.getCreationDate();
+			if ((getOriginalName().equals(tag.getOriginalName()))
+					&& ((objCreationDate <= this.creationDate + (TIME_DIFFERENCE_PLUS_MINUS_SECONDS - 1)) || (objCreationDate >= this.creationDate
+							- (TIME_DIFFERENCE_PLUS_MINUS_SECONDS - 1)))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private String getOriginalName() {
+		return originalName;
 	}
 }
