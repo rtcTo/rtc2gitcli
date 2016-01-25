@@ -14,7 +14,7 @@ final class RtcTag implements Tag {
     */
 	private static final int TIME_DIFFERENCE_PLUS_MINUS_SECONDS = 5;
 	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("").setCreationDate(Long.MAX_VALUE);
-	private final String uuid;
+	private String uuid;
 	private String originalName;
 	private boolean makeNameUnique;
 	private long creationDate;
@@ -40,6 +40,11 @@ final class RtcTag implements Tag {
 
 	String getUuid() {
 		return uuid;
+	}
+
+	RtcTag setUuid(String uuid) {
+		this.uuid = uuid;
+		return this;
 	}
 
 	void add(RtcChangeSet changeSet) {
@@ -146,5 +151,13 @@ final class RtcTag implements Tag {
 
 	String getOriginalName() {
 		return originalName;
+	}
+
+	public void addAll(Map<String, List<RtcChangeSet>> componentsChangeSets) {
+		for (Entry<String, List<RtcChangeSet>> changesetList : componentsChangeSets.entrySet()) {
+			for (RtcChangeSet changeset : changesetList.getValue()) {
+				add(changeset);
+			}
+		}
 	}
 }

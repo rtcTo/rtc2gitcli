@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -63,6 +65,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	public abstract Migrator getMigrator();
 
+	public abstract Pattern getBaselineIncludePattern();
+
 	@Override
 	public void run() throws FileSystemException {
 		long start = System.currentTimeMillis();
@@ -110,9 +114,10 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			// compare destination workspace with stream of source workspace to get tagging information
 			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
 			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
+			logTagInfos(tags);
 			Collections.sort(tags, new TagCreationDateComparator());
 
-			logTagInfos(tags);
+			tags = pruneTagList(tags);
 
 			if (listTagsOnly) {
 				// Stop here before migration of any data
@@ -159,6 +164,40 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		} finally {
 			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
 		}
+	}
+
+	private List<RtcTag> pruneTagList(List<RtcTag> tags) {
+		List<RtcTag> prunedList = new ArrayList<RtcTag>();
+		RtcTag tmpTag = null;
+
+		output.writeLine("Resepect baseline include list...");
+
+		for (RtcTag currentTag : tags) {
+			if (tmpTag == null) {
+				tmpTag = currentTag;
+			} else {
+				tmpTag.setUuid(currentTag.getUuid()).setOriginalName(currentTag.getOriginalName())
+						.setCreationDate(currentTag.getCreationDate());
+				tmpTag.addAll(currentTag.getComponentsChangeSets());
+			}
+
+			if (isIncluded(tmpTag)) {
+				prunedList.add(tmpTag);
+				tmpTag = null;
+			}
+		}
+
+		if (tmpTag != null) {
+			prunedList.add(tmpTag);
+		}
+
+		logTagInfos(prunedList);
+		return prunedList;
+	}
+
+	private boolean isIncluded(RtcTag tag) {
+		Matcher matcher = getBaselineIncludePattern().matcher(tag.getOriginalName());
+		return matcher.matches();
 	}
 
 	private void setStdOut() {
@@ -237,7 +276,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			ChangeLogCustomizer customizer = new ChangeLogCustomizer();
 
 			customizer.setFlowsToInclude(FlowType.Incoming);
+			customizer.setIncludeComponents(true);
 			customizer.setIncludeBaselines(true);
+			customizer.setIncludeChangeSets(true);
+			customizer.setIncludeWorkItems(true);
+			customizer.setPruneEmptyDirections(false);
+			customizer.setPruneUnchangedComponents(false);
 
 			List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
 			pathResolvers.add(CopyFileAreaPathResolver.create());

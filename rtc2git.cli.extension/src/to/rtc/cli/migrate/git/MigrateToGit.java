@@ -4,19 +4,23 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
-
-import com.ibm.team.filesystem.client.FileSystemException;
-import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
+import java.util.regex.Pattern;
 
 import to.rtc.cli.migrate.MigrateTo;
 import to.rtc.cli.migrate.Migrator;
 
+import com.ibm.team.filesystem.client.FileSystemException;
+import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
+
 public class MigrateToGit extends MigrateTo {
 	private Migrator migratorImplementation;
+	private Pattern baselineIncludeRegexPattern;
 
 	@Override
 	public void run() throws FileSystemException {
-		migratorImplementation = new GitMigrator(readProperties(config.getSubcommandCommandLine()));
+		Properties migrationProperties = readProperties(config.getSubcommandCommandLine());
+		baselineIncludeRegexPattern = Pattern.compile(migrationProperties.getProperty("rtc.baseline.include", ""));
+		migratorImplementation = new GitMigrator(migrationProperties);
 		try {
 			super.run();
 		} finally {
@@ -27,6 +31,11 @@ public class MigrateToGit extends MigrateTo {
 	@Override
 	public Migrator getMigrator() {
 		return migratorImplementation;
+	}
+
+	@Override
+	public Pattern getBaselineIncludePattern() {
+		return baselineIncludeRegexPattern;
 	}
 
 	private Properties readProperties(ICommandLine subargs) {
