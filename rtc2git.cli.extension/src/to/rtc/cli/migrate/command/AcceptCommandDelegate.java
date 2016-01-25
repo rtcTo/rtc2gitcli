@@ -38,6 +38,9 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 				case Constants.STATUS_FAILURE:
 					printExceptionMessage("FAILURE", status);
 					return Constants.STATUS_FAILURE;
+				case Constants.STATUS_INTERNAL_ERROR:
+					printExceptionMessage("INTERNAL_ERROR", status);
+					return Constants.STATUS_INTERNAL_ERROR;
 				case Constants.STATUS_GAP:
 					printExceptionMessage("GAP", status);
 					return Constants.STATUS_GAP;
@@ -89,8 +92,10 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 				throw new RuntimeException("Unable to get password", e);
 			}
 		}
-		setSubCommandLine(config, generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid,
-				isBaseline, acceptMissingChangesets));
+		setSubCommandLine(
+				config,
+				generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline,
+						acceptMissingChangesets));
 	}
 
 	private ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace,
