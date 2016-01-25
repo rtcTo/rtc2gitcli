@@ -55,6 +55,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	private StreamOutput output;
 	private boolean listTagsOnly = false;
+	private boolean forceLoad = false;
 
 	private IProgressMonitor getMonitor() {
 		return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
@@ -82,6 +83,11 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			if (subargs.hasOption(MigrateToOptions.OPT_RTC_LIST_TAGS_ONLY)) {
 				listTagsOnly = true;
 				output.writeLine("***** LIST ONLY THE TAGS *****");
+			}
+
+			if (subargs.hasOption(MigrateToOptions.OPT_RTC_FORCE_LOAD)) {
+				forceLoad = true;
+				output.writeLine("***** INITIAL LOAD IS FORCED *****");
 			}
 
 			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
@@ -124,7 +130,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			migrator.init(sandboxDirectory);
 
 			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
-					sandboxDirectory);
+					sandboxDirectory, forceLoad);
 			boolean isFirstTag = true;
 			int numberOfTags = tags.size();
 			int tagCounter = 0;
