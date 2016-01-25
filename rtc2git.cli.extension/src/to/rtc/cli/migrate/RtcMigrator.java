@@ -28,14 +28,16 @@ public class RtcMigrator {
 	private final Migrator migrator;
 	private static final Set<String> initiallyLoadedComponents = new HashSet<String>();
 	private File sandboxDirectory;
+	private final boolean forceLoad;
 
 	public RtcMigrator(IChangeLogOutput output, IScmClientConfiguration config, String workspace, Migrator migrator,
-			File sandboxDirectory) {
+			File sandboxDirectory, boolean forceLoad) {
 		this.output = output;
 		this.config = config;
 		this.workspace = workspace;
 		this.migrator = migrator;
 		this.sandboxDirectory = sandboxDirectory;
+		this.forceLoad = forceLoad;
 	}
 
 	public void migrateTag(RtcTag tag) throws CLIClientException {
@@ -126,7 +128,7 @@ public class RtcMigrator {
 	private void handleInitialLoad(RtcChangeSet changeSet) {
 		if (!initiallyLoadedComponents.contains(changeSet.getComponent())) {
 			try {
-				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), false).run();
+				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), forceLoad).run();
 				initiallyLoadedComponents.add(changeSet.getComponent());
 			} catch (CLIClientException e) { // ignore
 				throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace
