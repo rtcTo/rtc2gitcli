@@ -1,6 +1,7 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -43,16 +44,28 @@ public class RtcMigrator {
 		int numberOfChangesets = changeSets.size();
 		String tagName = tag.getName();
 		for (RtcChangeSet changeSet : changeSets) {
-			long acceptDuration = accept(changeSet);
-			long commitDuration = commit(changeSet);
-			changeSetCounter++;
-			output.writeLine("Migrated [" + tagName + "] [" + changeSetCounter + "]/[" + numberOfChangesets
-					+ "] changesets. Accept took " + acceptDuration + "ms commit took " + commitDuration + "ms");
-			if (migrator.needsIntermediateCleanup()) {
-				intermediateCleanup();
-			}
-			if (changeSetCounter % ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN == 0) {
-				cleanLocalHistory();
+			try {
+				long acceptDuration = accept(changeSet);
+				long commitDuration = commit(changeSet);
+				changeSetCounter++;
+				output.writeLine("Migrated [" + tagName + "] [" + changeSetCounter + "]/[" + numberOfChangesets
+						+ "] changesets. Accept took " + acceptDuration + "ms commit took " + commitDuration + "ms");
+				if (migrator.needsIntermediateCleanup()) {
+					intermediateCleanup();
+				}
+				if (changeSetCounter % ACCEPTS_BEFORE_LOCAL_HISTORY_CLEAN == 0) {
+					cleanLocalHistory();
+				}
+			} catch (CLIClientException clie) {
+				output.writeLine("Changeset details:");
+				output.writeLine("  Tag original name       : " + tag.getOriginalName());
+				output.writeLine("  Tag creation date       : " + new Date(tag.getCreationDate()));
+				output.writeLine("  Changeset comment       : " + changeSet.getComment());
+				output.writeLine("  Changeset creator       : " + changeSet.getCreatorName());
+				output.writeLine("  Changeset creation date : " + new Date(changeSet.getCreationDate()));
+				output.writeLine("  Changeset component     : " + changeSet.getComponent());
+				output.writeLine("  Changeset UUID          : " + changeSet.getUuid());
+				throw clie;
 			}
 		}
 		cleanLocalHistory();
