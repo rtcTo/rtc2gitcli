@@ -1,6 +1,5 @@
 package to.rtc.cli.migrate;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,8 +23,8 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	private final Map<String, String> lastChangeSets;
 	private boolean lastChangeSetReached;
 
-	public HistoryEntryVisitor(IChangeLogOutput out, Map<String, String> lastChangeSets) {
-		tags = new ArrayList<RtcTag>();
+	public HistoryEntryVisitor(List<RtcTag> tags, Map<String, String> lastChangeSets, IChangeLogOutput out) {
+		this.tags = tags;
 		setOutput(out);
 		this.lastChangeSets = lastChangeSets;
 		this.lastChangeSetReached = false;
@@ -110,17 +109,8 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 		RtcTag tag = new RtcTag(dto.getItemId()).setCreationDate(creationDate).setOriginalName(dto.getEntryName());
 		if (tags.contains(tag)) {
 			tag = tags.get(tags.indexOf(tag));
-			if (tag.getCreationDate() > creationDate) {
-				tag.setCreationDate(creationDate);
-			}
 		} else {
-			for (RtcTag tagToCheck : tags) {
-				if (tagToCheck.getOriginalName().equals(tag.getOriginalName())) {
-					tag.makeNameUnique();
-					break;
-				}
-			}
-			tags.add(tag);
+			throw new RuntimeException("Baseline not found");
 		}
 		return tag;
 	}

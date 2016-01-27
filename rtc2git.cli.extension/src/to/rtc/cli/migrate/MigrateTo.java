@@ -26,8 +26,12 @@ import com.ibm.team.filesystem.client.internal.snapshot.FlowType;
 import com.ibm.team.filesystem.client.internal.snapshot.SnapshotId;
 import com.ibm.team.filesystem.client.internal.snapshot.SnapshotSyncReport;
 import com.ibm.team.filesystem.client.rest.IFilesystemRestClient;
+import com.ibm.team.filesystem.client.rest.parameters.ParmsGetBaselines;
 import com.ibm.team.filesystem.common.changemodel.IPathResolver;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogEntryDTO;
+import com.ibm.team.filesystem.common.internal.rest.client.core.BaselineDTO;
+import com.ibm.team.filesystem.common.internal.rest.client.sync.BaselineHistoryEntryDTO;
+import com.ibm.team.filesystem.common.internal.rest.client.sync.GetBaselinesDTO;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogCustomizer;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.ChangeLogStreamOutput;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.GenerateChangeLogOperation;
@@ -113,9 +117,10 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 			// compare destination workspace with stream of source workspace to get tagging information
 			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
-			List<RtcTag> tags = createTagMap(repo, sourceWs, destinationWs);
+
+			List<RtcTag> tags = createTagListFromBaselines(client, repo, sourceWs);
+			addChangeSetInfo(tags, repo, sourceWs, destinationWs);
 			logTagInfos(tags);
-			Collections.sort(tags, new TagCreationDateComparator());
 
 			tags = pruneTagList(tags);
 
@@ -190,7 +195,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		if (tmpTag != null) {
 			prunedList.add(tmpTag);
 		}
-
+		Collections.sort(tags, new TagCreationDateComparator());
 		logTagInfos(prunedList);
 		return prunedList;
 	}
@@ -255,10 +260,60 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		return lastChangeSets;
 	}
 
-	private List<RtcTag> createTagMap(ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
+	private List<RtcTag> createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
+			IWorkspace sourceWs) {
+		List<RtcTag> tagMap = new ArrayList<RtcTag>();
+		try {
+			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
+					sourceWs, getMonitor());
+
+			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
+					.getCurrentAcceptFlow().getFlowNode());
+
+			@SuppressWarnings("unchecked")
+			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+
+			ParmsGetBaselines parms = new ParmsGetBaselines();
+			parms.workspaceItemId = sourceStreamHandle.getItemId().getUuidValue();
+			parms.repositoryUrl = repo.getRepositoryURI();
+			parms.max = 1000000;
+
+			GetBaselinesDTO result = null;
+			for (IComponentHandle component : componentHandles) {
+				parms.componentItemId = component.getItemId().getUuidValue();
+				result = client.getBaselines(parms, getMonitor());
+				for (Object obj : result.getBaselineHistoryEntriesInWorkspace()) {
+					BaselineHistoryEntryDTO baselineEntry = (BaselineHistoryEntryDTO) obj;
+					BaselineDTO baseline = baselineEntry.getBaseline();
+					long creationDate = baselineEntry.isSetDeliveryDate() ? baselineEntry.getDeliveryDate() : baseline
+							.getCreationDate();
+					RtcTag tag = new RtcTag(baseline.getItemId()).setCreationDate(creationDate).setOriginalName(
+							baseline.getName());
+					if (tagMap.contains(tag)) {
+						tag = tagMap.get(tagMap.indexOf(tag));
+						if (tag.getCreationDate() > creationDate) {
+							tag.setCreationDate(creationDate);
+						}
+					} else {
+						for (RtcTag tagToCheck : tagMap) {
+							if (tagToCheck.getOriginalName().equals(tag.getOriginalName())) {
+								tag.makeNameUnique();
+								break;
+							}
+						}
+						tagMap.add(tag);
+					}
+				}
+			}
+		} catch (TeamRepositoryException e) {
+			e.printStackTrace(output.getOutputStream());
+		}
+		return tagMap;
+	}
+
+	private void addChangeSetInfo(List<RtcTag> tags, ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
 
 		SnapshotSyncReport syncReport;
-		List<RtcTag> tagMap = new ArrayList<RtcTag>();
 		try {
 			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
 					sourceWs, getMonitor());
@@ -295,18 +350,17 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get list of baselines and changesets form RTC took ["
 					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 			output.writeLine("Parse the list of baselines and changesets.");
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(new ChangeLogStreamOutput(config.getContext()
-					.stdout()), getLastChangeSetUuids(repo, sourceWs));
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(tags, getLastChangeSetUuids(repo, sourceWs),
+					new ChangeLogStreamOutput(config.getContext().stdout()));
 
 			startTime = System.currentTimeMillis();
-			tagMap = visitor.acceptInto(changelog);
+			visitor.acceptInto(changelog);
 			output.writeLine("Parse the list of baselines and changesets took ["
 					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 
 		} catch (TeamRepositoryException e) {
 			e.printStackTrace(output.getOutputStream());
 		}
-		return tagMap;
 	}
 
 	static class LogTaskMonitor extends NullProgressMonitor {
