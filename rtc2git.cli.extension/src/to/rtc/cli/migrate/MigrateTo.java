@@ -55,296 +55,294 @@ import com.ibm.team.scm.common.IWorkspaceHandle;
 @SuppressWarnings("restriction")
 public abstract class MigrateTo extends AbstractSubcommand implements ISubcommand {
 
-	private StreamOutput output;
-	private boolean listTagsOnly = false;
-	private boolean forceLoad = false;
+    private StreamOutput output;
+    private boolean listTagsOnly = false;
+    private boolean forceLoad = false;
 
-	private IProgressMonitor getMonitor() {
-		return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
-	}
+    private IProgressMonitor getMonitor() {
+        return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
+    }
 
-	public abstract Migrator getMigrator();
+    public abstract Migrator getMigrator();
 
-	public abstract Pattern getBaselineIncludePattern();
+    public abstract Pattern getBaselineIncludePattern();
 
-	@Override
-	public void run() throws FileSystemException {
-		long start = System.currentTimeMillis();
-		setStdOut();
-		output = new StreamOutput(config.getContext().stdout());
+    @Override
+    public void run() throws FileSystemException {
+        long start = System.currentTimeMillis();
+        setStdOut();
+        output = new StreamOutput(config.getContext().stdout());
 
-		try {
-			// Consume the command-line
-			ICommandLine subargs = config.getSubcommandCommandLine();
+        try {
+            // Consume the command-line
+            ICommandLine subargs = config.getSubcommandCommandLine();
 
-			int timeout = 900;
-			if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
-				String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)
-						.getValue();
-				timeout = Integer.parseInt(timeoutOptionValue);
-			}
+            int timeout = 900;
+            if (subargs.hasOption(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)) {
+                String timeoutOptionValue = subargs.getOptionValue(MigrateToOptions.OPT_RTC_CONNECTION_TIMEOUT)
+                        .getValue();
+                timeout = Integer.parseInt(timeoutOptionValue);
+            }
 
-			if (subargs.hasOption(MigrateToOptions.OPT_RTC_LIST_TAGS_ONLY)) {
-				listTagsOnly = true;
-				output.writeLine("***** LIST ONLY THE TAGS *****");
-			}
+            if (subargs.hasOption(MigrateToOptions.OPT_RTC_LIST_TAGS_ONLY)) {
+                listTagsOnly = true;
+                output.writeLine("***** LIST ONLY THE TAGS *****");
+            }
 
-			if (subargs.hasOption(MigrateToOptions.OPT_RTC_FORCE_LOAD)) {
-				forceLoad = true;
-				output.writeLine("***** INITIAL LOAD IS FORCED *****");
-			}
+            if (subargs.hasOption(MigrateToOptions.OPT_RTC_FORCE_LOAD)) {
+                forceLoad = true;
+                output.writeLine("***** INITIAL LOAD IS FORCED *****");
+            }
 
-			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
-			SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
-			final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
-					subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
-			SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
+            final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
+                    subargs.getOptionValue(MigrateToOptions.OPT_SRC_WS), config);
+            SubcommandUtil.validateArgument(sourceWsOption, ItemType.WORKSPACE);
+            final ScmCommandLineArgument destinationWsOption = ScmCommandLineArgument.create(
+                    subargs.getOptionValue(MigrateToOptions.OPT_DEST_WS), config);
+            SubcommandUtil.validateArgument(destinationWsOption, ItemType.WORKSPACE);
 
-			// Initialize connection to RTC
-			output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
-			IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
-			ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
-			repo.setConnectionTimeout(timeout);
+            // Initialize connection to RTC
+            output.writeLine("Initialize RTC connection with connection timeout of " + timeout + "s");
+            IFilesystemRestClient client = SubcommandUtil.setupDaemon(config);
+            ITeamRepository repo = RepoUtil.loginUrlArgAncestor(config, client, destinationWsOption);
+            repo.setConnectionTimeout(timeout);
 
-			IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
-			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
-					config);
+            IWorkspace sourceWs = RepoUtil.getWorkspace(sourceWsOption.getItemSelector(), true, false, repo, config);
+            IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
+                    config);
 
-			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
-			output.writeLine("Create the list of baselines");
-			RtcTagList tagList = createTagListFromBaselines(client, repo, sourceWs);
-			tagList.printTagList(output);
+            output.writeLine("Get full history information from RTC. This could take a large amount of time.");
+            output.writeLine("Create the list of baselines");
+            RtcTagList tagList = createTagListFromBaselines(client, repo, sourceWs);
 
-			output.writeLine("Get changeset information for all baselines");
-			addChangeSetInfo(tagList, repo, sourceWs, destinationWs);
+            output.writeLine("Get changeset information for all baselines");
+            addChangeSetInfo(tagList, repo, sourceWs, destinationWs);
 
-			tagList.printTagList(output);
+            tagList.printTagList(output);
 
-			output.writeLine("Filter included baselines...");
+            output.writeLine("Filter included baselines...");
 
-			tagList.pruneExcludedTags(getBaselineIncludePattern());
-			tagList.sortByCreationDate();
+            tagList.pruneExcludedTags(getBaselineIncludePattern());
+            tagList.sortByCreationDate();
 
-			tagList.printTagList(output);
+            tagList.printTagList(output);
 
-			if (listTagsOnly) {
-				// Stop here before migration of any data
-				return;
-			}
+            if (listTagsOnly) {
+                // Stop here before migration of any data
+                return;
+            }
 
-			final File sandboxDirectory;
-			output.writeLine("Start migration of tags.");
-			if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
-				sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
-			} else {
-				sandboxDirectory = new File(System.getProperty("user.dir"));
-			}
-			Migrator migrator = getMigrator();
-			migrator.init(sandboxDirectory);
+            final File sandboxDirectory;
+            output.writeLine("Start migration of tags.");
+            if (subargs.hasOption(CommonOptions.OPT_DIRECTORY)) {
+                sandboxDirectory = new File(subargs.getOption(CommonOptions.OPT_DIRECTORY));
+            } else {
+                sandboxDirectory = new File(System.getProperty("user.dir"));
+            }
+            Migrator migrator = getMigrator();
+            migrator.init(sandboxDirectory);
 
-			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
-					sandboxDirectory, forceLoad);
-			boolean isFirstTag = true;
-			int numberOfTags = tagList.size();
-			int tagCounter = 0;
-			for (RtcTag tag : tagList) {
-				if (isFirstTag && tag.isEmpty()) {
-					output.writeLine("Ignore first empty tag, as we cannot accept baselines");
-					continue;
-				}
-				isFirstTag = false;
-				final long startTag = System.currentTimeMillis();
-				output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/"
-						+ numberOfTags + "]");
-				try {
-					rtcMigrator.migrateTag(tag);
-					tagCounter++;
-				} catch (CLIClientException e) {
-					e.printStackTrace(output.getOutputStream());
-					throw new RuntimeException(e);
-				}
-				output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
-						+ "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
-			}
-		} catch (Throwable t) {
-			t.printStackTrace(output.getOutputStream());
-			throw new RuntimeException(t);
-		} finally {
-			output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
-		}
-	}
+            RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
+                    sandboxDirectory, forceLoad);
+            boolean isFirstTag = true;
+            int numberOfTags = tagList.size();
+            int tagCounter = 0;
+            for (RtcTag tag : tagList) {
+                if (isFirstTag && tag.isEmpty()) {
+                    output.writeLine("Ignore migration of tag [" + tag.toString() + "] because it is empty.");
+                    continue;
+                }
+                isFirstTag = false;
+                final long startTag = System.currentTimeMillis();
+                output.writeLine("Start migration of Tag [" + tag.getName() + "] [" + (tagCounter + 1) + "/"
+                        + numberOfTags + "]");
+                try {
+                    rtcMigrator.migrateTag(tag);
+                    tagCounter++;
+                } catch (CLIClientException e) {
+                    e.printStackTrace(output.getOutputStream());
+                    throw new RuntimeException(e);
+                }
+                output.writeLine("Migration of tag [" + tag.getName() + "] [" + (tagCounter) + "/" + numberOfTags
+                        + "] took [" + (System.currentTimeMillis() - startTag) / 1000 + "] s");
+            }
+        } catch (Throwable t) {
+            t.printStackTrace(output.getOutputStream());
+            throw new RuntimeException(t);
+        } finally {
+            output.writeLine("Migration took [" + (System.currentTimeMillis() - start) / 1000 + "] s");
+        }
+    }
 
-	private void setStdOut() {
-		Class<?> c = LocalContext.class;
-		Field subargs;
-		try {
-			subargs = c.getDeclaredField("stdout");
-			subargs.setAccessible(true);
-			subargs.set(config.getContext(), new LoggingPrintStream(config.getContext().stdout()));
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+    private void setStdOut() {
+        Class<?> c = LocalContext.class;
+        Field subargs;
+        try {
+            subargs = c.getDeclaredField("stdout");
+            subargs.setAccessible(true);
+            subargs.set(config.getContext(), new LoggingPrintStream(config.getContext().stdout()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
-		IWorkspaceConnection sourceWsConnection;
-		IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
-		IItemManager itemManager = repo.itemManager();
-		Map<String, String> lastChangeSets = new HashMap<String, String>();
-		try {
-			sourceWsConnection = workspaceManager.getWorkspaceConnection(sourceWs, getMonitor());
-			@SuppressWarnings("unchecked")
-			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
-			@SuppressWarnings("unchecked")
-			List<IComponent> components = itemManager.fetchCompleteItems(componentHandles, componentHandles.size(),
-					getMonitor());
-			for (IComponent component : components) {
-				@SuppressWarnings("unchecked")
-				List<ClientChangeSetEntry> changeSets = sourceWsConnection.changeHistory(component)
-						.recent(getMonitor());
-				IChangeSetHandle changeSetHandle = changeSets.get(changeSets.size() - 1).changeSet();
-				lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
-			}
-		} catch (TeamRepositoryException e) {
-			e.printStackTrace(output.getOutputStream());
-		}
-		return lastChangeSets;
-	}
+    private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
+        IWorkspaceConnection sourceWsConnection;
+        IWorkspaceManager workspaceManager = SCMPlatform.getWorkspaceManager(repo);
+        IItemManager itemManager = repo.itemManager();
+        Map<String, String> lastChangeSets = new HashMap<String, String>();
+        try {
+            sourceWsConnection = workspaceManager.getWorkspaceConnection(sourceWs, getMonitor());
+            @SuppressWarnings("unchecked")
+            List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+            @SuppressWarnings("unchecked")
+            List<IComponent> components = itemManager.fetchCompleteItems(componentHandles, componentHandles.size(),
+                    getMonitor());
+            for (IComponent component : components) {
+                @SuppressWarnings("unchecked")
+                List<ClientChangeSetEntry> changeSets = sourceWsConnection.changeHistory(component)
+                        .recent(getMonitor());
+                IChangeSetHandle changeSetHandle = changeSets.get(changeSets.size() - 1).changeSet();
+                lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
+            }
+        } catch (TeamRepositoryException e) {
+            e.printStackTrace(output.getOutputStream());
+        }
+        return lastChangeSets;
+    }
 
-	private RtcTagList createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
-			IWorkspace sourceWs) {
-		RtcTagList tagList = new RtcTagList();
-		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
-					sourceWs, getMonitor());
+    private RtcTagList createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
+            IWorkspace sourceWs) {
+        RtcTagList tagList = new RtcTagList();
+        try {
+            IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
+                    sourceWs, getMonitor());
 
-			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
-					.getCurrentAcceptFlow().getFlowNode());
+            IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
+                    .getCurrentAcceptFlow().getFlowNode());
 
-			@SuppressWarnings("unchecked")
-			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+            @SuppressWarnings("unchecked")
+            List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
 
-			ParmsGetBaselines parms = new ParmsGetBaselines();
-			parms.workspaceItemId = sourceStreamHandle.getItemId().getUuidValue();
-			parms.repositoryUrl = repo.getRepositoryURI();
-			parms.max = 1000000;
+            ParmsGetBaselines parms = new ParmsGetBaselines();
+            parms.workspaceItemId = sourceStreamHandle.getItemId().getUuidValue();
+            parms.repositoryUrl = repo.getRepositoryURI();
+            parms.max = 1000000;
 
-			GetBaselinesDTO result = null;
-			for (IComponentHandle component : componentHandles) {
-				parms.componentItemId = component.getItemId().getUuidValue();
-				result = client.getBaselines(parms, getMonitor());
-				for (Object obj : result.getBaselineHistoryEntriesInWorkspace()) {
-					BaselineHistoryEntryDTO baselineEntry = (BaselineHistoryEntryDTO) obj;
-					BaselineDTO baseline = baselineEntry.getBaseline();
-					long creationDate = baselineEntry.isSetDeliveryDate() ? baselineEntry.getDeliveryDate() : baseline
-							.getCreationDate();
-					RtcTag tag = new RtcTag(baseline.getItemId()).setCreationDate(creationDate).setOriginalName(
-							baseline.getName());
-					tag = tagList.add(tag);
-				}
-			}
-			// add default tag
-			tagList.add(new RtcTag(null).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE));
-		} catch (TeamRepositoryException e) {
-			e.printStackTrace(output.getOutputStream());
-		}
-		return tagList;
-	}
+            GetBaselinesDTO result = null;
+            for (IComponentHandle component : componentHandles) {
+                parms.componentItemId = component.getItemId().getUuidValue();
+                result = client.getBaselines(parms, getMonitor());
+                for (Object obj : result.getBaselineHistoryEntriesInWorkspace()) {
+                    BaselineHistoryEntryDTO baselineEntry = (BaselineHistoryEntryDTO) obj;
+                    BaselineDTO baseline = baselineEntry.getBaseline();
+                    long creationDate = baseline.getCreationDate();
+                    RtcTag tag = new RtcTag(baseline.getItemId()).setCreationDate(creationDate).setOriginalName(
+                            baseline.getName());
+                    tag = tagList.add(tag);
+                }
+            }
+            // add default tag
+            tagList.add(new RtcTag(null).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE));
+        } catch (TeamRepositoryException e) {
+            e.printStackTrace(output.getOutputStream());
+        }
+        return tagList;
+    }
 
-	private void addChangeSetInfo(RtcTagList tagList, ITeamRepository repo, IWorkspace sourceWs,
-			IWorkspace destinationWs) {
+    private void addChangeSetInfo(RtcTagList tagList, ITeamRepository repo, IWorkspace sourceWs,
+            IWorkspace destinationWs) {
 
-		SnapshotSyncReport syncReport;
-		try {
-			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
-					sourceWs, getMonitor());
+        SnapshotSyncReport syncReport;
+        try {
+            IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
+                    sourceWs, getMonitor());
 
-			IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
-					.getCurrentAcceptFlow().getFlowNode());
-			SnapshotId sourceSnapshotId = SnapshotId.getSnapshotId(sourceStreamHandle);
-			SnapshotId destinationSnapshotId = SnapshotId.getSnapshotId(destinationWs.getItemHandle());
+            IWorkspaceHandle sourceStreamHandle = (IWorkspaceHandle) (sourceWsConnection.getFlowTable()
+                    .getCurrentAcceptFlow().getFlowNode());
+            SnapshotId sourceSnapshotId = SnapshotId.getSnapshotId(sourceStreamHandle);
+            SnapshotId destinationSnapshotId = SnapshotId.getSnapshotId(destinationWs.getItemHandle());
 
-			@SuppressWarnings("unchecked")
-			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
-			syncReport = SnapshotSyncReport.compare(destinationSnapshotId.getSnapshot(null),
-					sourceSnapshotId.getSnapshot(null), componentHandles, getMonitor());
-			GenerateChangeLogOperation clOp = new GenerateChangeLogOperation();
-			ChangeLogCustomizer customizer = new ChangeLogCustomizer();
+            @SuppressWarnings("unchecked")
+            List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
+            syncReport = SnapshotSyncReport.compare(destinationSnapshotId.getSnapshot(null),
+                    sourceSnapshotId.getSnapshot(null), componentHandles, getMonitor());
+            GenerateChangeLogOperation clOp = new GenerateChangeLogOperation();
+            ChangeLogCustomizer customizer = new ChangeLogCustomizer();
 
-			customizer.setFlowsToInclude(FlowType.Incoming);
-			customizer.setIncludeComponents(true);
-			customizer.setIncludeBaselines(true);
-			customizer.setIncludeChangeSets(true);
-			customizer.setIncludeWorkItems(true);
-			customizer.setPruneEmptyDirections(false);
-			customizer.setPruneUnchangedComponents(false);
+            customizer.setFlowsToInclude(FlowType.Incoming);
+            customizer.setIncludeComponents(true);
+            customizer.setIncludeBaselines(true);
+            customizer.setIncludeChangeSets(true);
+            customizer.setIncludeWorkItems(true);
+            customizer.setPruneEmptyDirections(false);
+            customizer.setPruneUnchangedComponents(false);
 
-			List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
-			pathResolvers.add(CopyFileAreaPathResolver.create());
-			pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
-			pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
-			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
-			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
-			output.writeLine("Get list of baselines and changesets form RTC.");
-			long startTime = System.currentTimeMillis();
-			ChangeLogEntryDTO changelog = clOp.run(getMonitor());
-			output.writeLine("Get list of baselines and changesets form RTC took ["
-					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
-			output.writeLine("Parse the list of baselines and changesets.");
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(tagList, getLastChangeSetUuids(repo, sourceWs),
-					new ChangeLogStreamOutput(config.getContext().stdout()));
+            List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
+            pathResolvers.add(CopyFileAreaPathResolver.create());
+            pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
+            pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
+            IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
+            clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
+            output.writeLine("Get list of baselines and changesets form RTC.");
+            long startTime = System.currentTimeMillis();
+            ChangeLogEntryDTO changelog = clOp.run(getMonitor());
+            output.writeLine("Get list of baselines and changesets form RTC took ["
+                    + (System.currentTimeMillis() - startTime) / 1000 + "]s.");
+            output.writeLine("Parse the list of baselines and changesets.");
+            HistoryEntryVisitor visitor = new HistoryEntryVisitor(tagList, getLastChangeSetUuids(repo, sourceWs),
+                    new ChangeLogStreamOutput(config.getContext().stdout()));
 
-			startTime = System.currentTimeMillis();
-			visitor.acceptInto(changelog);
-			output.writeLine("Parse the list of baselines and changesets took ["
-					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
+            startTime = System.currentTimeMillis();
+            visitor.acceptInto(changelog);
+            output.writeLine("Parse the list of baselines and changesets took ["
+                    + (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 
-		} catch (TeamRepositoryException e) {
-			e.printStackTrace(output.getOutputStream());
-		}
-	}
+        } catch (TeamRepositoryException e) {
+            e.printStackTrace(output.getOutputStream());
+        }
+    }
 
-	static class LogTaskMonitor extends NullProgressMonitor {
-		private String taskName;
-		private int total = -1;
-		private int done = 0;
-		private final IChangeLogOutput output;
+    static class LogTaskMonitor extends NullProgressMonitor {
+        private String taskName;
+        private int total = -1;
+        private int done = 0;
+        private final IChangeLogOutput output;
 
-		LogTaskMonitor(IChangeLogOutput output) {
-			this.output = output;
-		}
+        LogTaskMonitor(IChangeLogOutput output) {
+            this.output = output;
+        }
 
-		@Override
-		public void beginTask(String task, int totalWork) {
-			if (task != null && !task.isEmpty()) {
-				taskName = task;
-				output.writeLine(taskName + " start");
-			}
-			total = totalWork;
-		}
+        @Override
+        public void beginTask(String task, int totalWork) {
+            if (task != null && !task.isEmpty()) {
+                taskName = task;
+                output.writeLine(taskName + " start");
+            }
+            total = totalWork;
+        }
 
-		@Override
-		public void subTask(String subTask) {
-			output.setIndent(2);
-			output.writeLine(subTask + " [" + getPercent() + "%]");
-		}
+        @Override
+        public void subTask(String subTask) {
+            output.setIndent(2);
+            output.writeLine(subTask + " [" + getPercent() + "%]");
+        }
 
-		private int getPercent() {
-			if (total <= 0) {
-				return -1;
-			}
-			return done * 100 / total;
-		}
+        private int getPercent() {
+            if (total <= 0) {
+                return -1;
+            }
+            return done * 100 / total;
+        }
 
-		@Override
-		public void worked(int workDone) {
-			done += workDone;
-		}
+        @Override
+        public void worked(int workDone) {
+            done += workDone;
+        }
 
-		@Override
-		public void done() {
-			taskName = null;
-		}
-	}
+        @Override
+        public void done() {
+            taskName = null;
+        }
+    }
 }
