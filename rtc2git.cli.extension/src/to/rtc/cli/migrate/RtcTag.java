@@ -12,7 +12,7 @@ final class RtcTag implements Tag {
 	/**
     *
     */
-	private static final int TIME_DIFFERENCE_PLUS_MINUS_SECONDS = 5;
+	private static final int TIME_DIFFERENCE_PLUS_MINUS_MILLISECONDS = 5000;
 	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("").setCreationDate(Long.MAX_VALUE);
 	private String uuid;
 	private String originalName;
@@ -20,12 +20,14 @@ final class RtcTag implements Tag {
 	private long creationDate;
 	private final Map<String, List<RtcChangeSet>> components;
 	private long totalChangeSetCount;
+	private boolean doCreateTag;
 
 	RtcTag(String uuid) {
 		this.uuid = uuid;
 		components = new HashMap<String, List<RtcChangeSet>>();
 		totalChangeSetCount = 0;
 		makeNameUnique = false;
+		doCreateTag = true;
 	}
 
 	RtcTag setCreationDate(long creationDate) {
@@ -140,10 +142,12 @@ final class RtcTag implements Tag {
 		if (obj.getClass() == getClass()) {
 			RtcTag tag = (RtcTag) obj;
 			long objCreationDate = tag.getCreationDate();
-			if ((getOriginalName().equals(tag.getOriginalName()))
-					&& ((objCreationDate <= this.creationDate + (TIME_DIFFERENCE_PLUS_MINUS_SECONDS - 1)) || (objCreationDate >= this.creationDate
-							- (TIME_DIFFERENCE_PLUS_MINUS_SECONDS - 1)))) {
-				return true;
+			if (getOriginalName().equals(tag.getOriginalName())) {
+				if ((objCreationDate == this.creationDate)
+						|| ((objCreationDate <= this.creationDate + TIME_DIFFERENCE_PLUS_MINUS_MILLISECONDS) && (objCreationDate >= this.creationDate
+								- TIME_DIFFERENCE_PLUS_MINUS_MILLISECONDS))) {
+					return true;
+				}
 			}
 		}
 		return false;
@@ -159,5 +163,14 @@ final class RtcTag implements Tag {
 				add(changeset);
 			}
 		}
+	}
+
+	RtcTag setDoCreateTag(boolean doCreateTag) {
+		this.doCreateTag = doCreateTag;
+		return this;
+	}
+
+	boolean doCreateTag() {
+		return doCreateTag;
 	}
 }

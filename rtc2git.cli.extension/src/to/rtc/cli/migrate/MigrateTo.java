@@ -3,13 +3,9 @@ package to.rtc.cli.migrate;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -115,14 +111,22 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			IWorkspace destinationWs = RepoUtil.getWorkspace(destinationWsOption.getItemSelector(), true, false, repo,
 					config);
 
-			// compare destination workspace with stream of source workspace to get tagging information
 			output.writeLine("Get full history information from RTC. This could take a large amount of time.");
+			output.writeLine("Create the list of baselines");
+			RtcTagList tagList = createTagListFromBaselines(client, repo, sourceWs);
+			tagList.printTagList(output);
 
-			List<RtcTag> tags = createTagListFromBaselines(client, repo, sourceWs);
-			addChangeSetInfo(tags, repo, sourceWs, destinationWs);
-			logTagInfos(tags);
+			output.writeLine("Get changeset information for all baselines");
+			addChangeSetInfo(tagList, repo, sourceWs, destinationWs);
 
-			tags = pruneTagList(tags);
+			tagList.printTagList(output);
+
+			output.writeLine("Filter included baselines...");
+
+			tagList.pruneExcludedTags(getBaselineIncludePattern());
+			tagList.sortByCreationDate();
+
+			tagList.printTagList(output);
 
 			if (listTagsOnly) {
 				// Stop here before migration of any data
@@ -142,9 +146,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
 					sandboxDirectory, forceLoad);
 			boolean isFirstTag = true;
-			int numberOfTags = tags.size();
+			int numberOfTags = tagList.size();
 			int tagCounter = 0;
-			for (RtcTag tag : tags) {
+			for (RtcTag tag : tagList) {
 				if (isFirstTag && tag.isEmpty()) {
 					output.writeLine("Ignore first empty tag, as we cannot accept baselines");
 					continue;
@@ -171,40 +175,6 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		}
 	}
 
-	private List<RtcTag> pruneTagList(List<RtcTag> tags) {
-		List<RtcTag> prunedList = new ArrayList<RtcTag>();
-		RtcTag tmpTag = null;
-
-		output.writeLine("Resepect baseline include list...");
-
-		for (RtcTag currentTag : tags) {
-			if (tmpTag == null) {
-				tmpTag = currentTag;
-			} else {
-				tmpTag.setUuid(currentTag.getUuid()).setOriginalName(currentTag.getOriginalName())
-						.setCreationDate(currentTag.getCreationDate());
-				tmpTag.addAll(currentTag.getComponentsChangeSets());
-			}
-
-			if (isIncluded(tmpTag)) {
-				prunedList.add(tmpTag);
-				tmpTag = null;
-			}
-		}
-
-		if (tmpTag != null) {
-			prunedList.add(tmpTag);
-		}
-		Collections.sort(tags, new TagCreationDateComparator());
-		logTagInfos(prunedList);
-		return prunedList;
-	}
-
-	private boolean isIncluded(RtcTag tag) {
-		Matcher matcher = getBaselineIncludePattern().matcher(tag.getOriginalName());
-		return matcher.matches();
-	}
-
 	private void setStdOut() {
 		Class<?> c = LocalContext.class;
 		Field subargs;
@@ -215,24 +185,6 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-	}
-
-	private void logTagInfos(List<RtcTag> tags) {
-		output.writeLine("********** BASELINE INFOS **********");
-		int totalChangeSets = 0;
-		for (RtcTag tag : tags) {
-			int totalChangeSetsByBaseline = tag.getOrderedChangeSets().size();
-			totalChangeSets += totalChangeSetsByBaseline;
-			output.writeLine("  Baseline [" + tag.getName() + "] with original name [" + tag.getOriginalName()
-					+ "] created at [" + (new Date(tag.getCreationDate())) + "] total number of changesets ["
-					+ totalChangeSetsByBaseline + "]");
-			for (Entry<String, List<RtcChangeSet>> entry : tag.getComponentsChangeSets().entrySet()) {
-				output.writeLine("      number of changesets  for component [" + entry.getKey() + "] is ["
-						+ entry.getValue().size() + "]");
-			}
-		}
-		output.writeLine("TOTAL NUMBER OF CHANGESETS [" + totalChangeSets + "]");
-		output.writeLine("********** BASELINE INFOS **********");
 	}
 
 	private Map<String, String> getLastChangeSetUuids(ITeamRepository repo, IWorkspace sourceWs) {
@@ -260,9 +212,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		return lastChangeSets;
 	}
 
-	private List<RtcTag> createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
+	private RtcTagList createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
 			IWorkspace sourceWs) {
-		List<RtcTag> tagMap = new ArrayList<RtcTag>();
+		RtcTagList tagList = new RtcTagList();
 		try {
 			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
 					sourceWs, getMonitor());
@@ -289,29 +241,19 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 							.getCreationDate();
 					RtcTag tag = new RtcTag(baseline.getItemId()).setCreationDate(creationDate).setOriginalName(
 							baseline.getName());
-					if (tagMap.contains(tag)) {
-						tag = tagMap.get(tagMap.indexOf(tag));
-						if (tag.getCreationDate() > creationDate) {
-							tag.setCreationDate(creationDate);
-						}
-					} else {
-						for (RtcTag tagToCheck : tagMap) {
-							if (tagToCheck.getOriginalName().equals(tag.getOriginalName())) {
-								tag.makeNameUnique();
-								break;
-							}
-						}
-						tagMap.add(tag);
-					}
+					tag = tagList.add(tag);
 				}
 			}
+			// add default tag
+			tagList.add(new RtcTag(null).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE));
 		} catch (TeamRepositoryException e) {
 			e.printStackTrace(output.getOutputStream());
 		}
-		return tagMap;
+		return tagList;
 	}
 
-	private void addChangeSetInfo(List<RtcTag> tags, ITeamRepository repo, IWorkspace sourceWs, IWorkspace destinationWs) {
+	private void addChangeSetInfo(RtcTagList tagList, ITeamRepository repo, IWorkspace sourceWs,
+			IWorkspace destinationWs) {
 
 		SnapshotSyncReport syncReport;
 		try {
@@ -350,7 +292,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get list of baselines and changesets form RTC took ["
 					+ (System.currentTimeMillis() - startTime) / 1000 + "]s.");
 			output.writeLine("Parse the list of baselines and changesets.");
-			HistoryEntryVisitor visitor = new HistoryEntryVisitor(tags, getLastChangeSetUuids(repo, sourceWs),
+			HistoryEntryVisitor visitor = new HistoryEntryVisitor(tagList, getLastChangeSetUuids(repo, sourceWs),
 					new ChangeLogStreamOutput(config.getContext().stdout()));
 
 			startTime = System.currentTimeMillis();

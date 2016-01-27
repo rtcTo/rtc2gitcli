@@ -17,20 +17,20 @@ import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 
 public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 
-	private final List<RtcTag> tags;
+	private final RtcTagList tags;
 	private String component;
 	private RtcTag actualTag;
 	private final Map<String, String> lastChangeSets;
 	private boolean lastChangeSetReached;
 
-	public HistoryEntryVisitor(List<RtcTag> tags, Map<String, String> lastChangeSets, IChangeLogOutput out) {
-		this.tags = tags;
+	public HistoryEntryVisitor(RtcTagList tagList, Map<String, String> lastChangeSets, IChangeLogOutput out) {
+		this.tags = tagList;
 		setOutput(out);
 		this.lastChangeSets = lastChangeSets;
 		this.lastChangeSetReached = false;
 	}
 
-	public List<RtcTag> acceptInto(ChangeLogEntryDTO root) {
+	public RtcTagList acceptInto(ChangeLogEntryDTO root) {
 		if (!enter(root)) {
 			return tags;
 		}
@@ -62,7 +62,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 			}
 		}
 		if (actualTag == null || !actualTag.getName().equals(parent.getEntryName())) {
-			actualTag = getTag("HEAD");
+			actualTag = tags.getHeadTag();
 		}
 		addToActualTag(changeSet);
 		if (lastChangeSets.get(component).equals(changeSetUuid)) {
@@ -79,7 +79,7 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 		if (lastChangeSetReached) {
 			return;
 		}
-		actualTag = getTag(dto);
+		actualTag = tags.getTag(dto.getItemId(), dto.getEntryName(), dto.getCreationDate());
 	}
 
 	@Override
@@ -103,27 +103,4 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 	@Override
 	protected void visitWorkItem(ChangeLogEntryDTO parent, ChangeLogWorkItemEntryDTO dto, boolean inChangeSet) {
 	}
-
-	private RtcTag getTag(ChangeLogBaselineEntryDTO dto) {
-		long creationDate = dto.getCreationDate();
-		RtcTag tag = new RtcTag(dto.getItemId()).setCreationDate(creationDate).setOriginalName(dto.getEntryName());
-		if (tags.contains(tag)) {
-			tag = tags.get(tags.indexOf(tag));
-		} else {
-			throw new RuntimeException("Baseline not found");
-		}
-		return tag;
-	}
-
-	private RtcTag getTag(String name) {
-		for (RtcTag tag : tags) {
-			if (name.equals(tag.getName())) {
-				return tag;
-			}
-		}
-		RtcTag tag = new RtcTag(null).setOriginalName(name).setCreationDate(Long.MAX_VALUE);
-		tags.add(tag);
-		return tag;
-	}
-
 }
