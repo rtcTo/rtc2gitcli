@@ -71,7 +71,7 @@ public class RtcMigrator {
 			}
 		}
 		cleanLocalHistory();
-		if (!"HEAD".equals(tagName)) {
+		if (tag.doCreateTag()) {
 			migrator.createTag(tag);
 		}
 	}
