@@ -57,7 +57,6 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	private StreamOutput output;
 	private boolean listTagsOnly = false;
-	private boolean forceLoad = false;
 
 	private IProgressMonitor getMonitor() {
 		return new LogTaskMonitor(new StreamOutput(config.getContext().stdout()));
@@ -69,6 +68,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	@Override
 	public void run() throws FileSystemException {
+		boolean isUpdateMigration = false;
 		long start = System.currentTimeMillis();
 		setStdOut();
 		output = new StreamOutput(config.getContext().stdout());
@@ -89,9 +89,9 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 				output.writeLine("***** LIST ONLY THE TAGS *****");
 			}
 
-			if (subargs.hasOption(MigrateToOptions.OPT_RTC_FORCE_LOAD)) {
-				forceLoad = true;
-				output.writeLine("***** INITIAL LOAD IS FORCED *****");
+			if (subargs.hasOption(MigrateToOptions.OPT_RTC_IS_UPDATE_MIGRATION)) {
+				isUpdateMigration = true;
+				output.writeLine("***** IS UPDATE MIGRATION *****");
 			}
 
 			final ScmCommandLineArgument sourceWsOption = ScmCommandLineArgument.create(
@@ -143,12 +143,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			migrator.init(sandboxDirectory);
 
 			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
-					sandboxDirectory, forceLoad);
+					sandboxDirectory, isUpdateMigration);
 			boolean isFirstTag = true;
 			int numberOfTags = tagList.size();
 			int tagCounter = 0;
 			for (RtcTag tag : tagList) {
-				if (isFirstTag && tag.isEmpty()) {
+				if (isUpdateMigration && isFirstTag && tag.isEmpty()) {
 					output.writeLine("Ignore migration of tag [" + tag.toString() + "] because it is empty.");
 					continue;
 				}
