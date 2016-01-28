@@ -16,7 +16,7 @@ public class MigrateToOptions implements IOptionSource {
 
 	public static final IOptionKey OPT_RTC_CONNECTION_TIMEOUT = new OptionKey("timeout");
 	public static final IOptionKey OPT_RTC_LIST_TAGS_ONLY = new OptionKey("listTagsOnly");
-	public static final IOptionKey OPT_RTC_FORCE_LOAD = new OptionKey("listTagsOnly");
+	public static final IOptionKey OPT_RTC_IS_UPDATE_MIGRATION = new OptionKey("updateMigration");
 
 	@Override
 	public Options getOptions() throws ConflictingOptionException {
@@ -34,8 +34,8 @@ public class MigrateToOptions implements IOptionSource {
 				"Timeout in seconds, default is 900");
 		options.addOption(new NamedOptionDefinition(OPT_RTC_LIST_TAGS_ONLY, "L", "list-tags-only", 0),
 				"List only all tags that would be migrated but do not migrate them.");
-		options.addOption(new NamedOptionDefinition(OPT_RTC_FORCE_LOAD, "f", "force", 0),
-				"Start load operations forced. This is sometimes required if the sandbox is not empty.");
+		options.addOption(new NamedOptionDefinition(OPT_RTC_IS_UPDATE_MIGRATION, "U", "update", 0),
+				"Update the content of an already migrated workspace.");
 		return options;
 	}
 }
