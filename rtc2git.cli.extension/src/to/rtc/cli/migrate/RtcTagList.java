@@ -107,13 +107,10 @@ public class RtcTagList implements Iterable<RtcTag> {
 	}
 
 	public RtcTag getHeadTag() {
-		for (RtcTag tag : rtcTags) {
-			if ("HEAD".equals(tag.getName())) {
-				return tag;
-			}
-		}
 		RtcTag tag = new RtcTag(null).setDoCreateTag(false).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE);
-		rtcTags.add(tag);
+		if (!rtcTags.contains(tag)) {
+			rtcTags.add(tag);
+		}
 		return tag;
 	}
 

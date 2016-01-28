@@ -106,4 +106,24 @@ public class RtcTagListTest {
 		thrown.expect(RuntimeException.class);
 		tagList.getTag("itemId", "tagName", 0);
 	}
+
+	@Test
+	public void testHeadTagWillNotBeTagged() {
+		RtcTag headTag = tagList.getHeadTag();
+
+		assertThat("HEAD tag will never be tagged", headTag.doCreateTag(), equalTo(false));
+
+		assertThat("HEAD tag will never be tagged", tagList.getHeadTag().doCreateTag(), equalTo(false));
+	}
+
+	@Test
+	public void testHeadTagOnlyExistOnce() {
+		tagList.getHeadTag();
+
+		assertThat("Only one tag is in the list", tagList.size(), equalTo(1));
+
+		tagList.getHeadTag();
+
+		assertThat("Only one tag is in the list", tagList.size(), equalTo(1));
+	}
 }
