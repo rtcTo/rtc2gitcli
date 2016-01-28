@@ -8,8 +8,10 @@ package to.rtc.cli.migrate;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
@@ -35,6 +37,10 @@ public class RtcTagListTest {
 		tagList = new RtcTagList();
 	}
 
+	private long TODAY = (new Date()).getTime();
+	private long YESTERDAY = TODAY - 86400000;
+	private long TOMORROW = TODAY + 86400000;
+
 	@Test
 	public void testAddAndGetUniqueTag() {
 		RtcTag rtcTag = new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE);
@@ -46,8 +52,8 @@ public class RtcTagListTest {
 
 	@Test
 	public void testAddMakeTagsUniqueIfCreatedateDifferToMuch() {
-		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE - 10000));
-		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE - 100000));
+		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(YESTERDAY));
+		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(TODAY));
 
 		assertThat("We have two tags in the list", tagList.size(), equalTo(2));
 
@@ -58,8 +64,27 @@ public class RtcTagListTest {
 		assertThat("We have two tags with unique name", tag1.getName(), not(equalTo(tag2.getName())));
 		assertThat("We have two tags with the same original name", tag1.getOriginalName(),
 				equalTo(tag2.getOriginalName()));
-		assertThat("The secondly added tag has a unique name", tag2.getName(), equalTo("TagNameUnique_"
-				+ (Long.MAX_VALUE - 100000) / 1000));
+		assertThat("The secondly added tag has a unique name", tag2.getName(), startsWith("TagNameUnique_20"));
+	}
+
+	@Test
+	public void testTagsKeepUniqueAfterPrune() {
+		tagList.add(new RtcTag("uuid").setOriginalName("v20110202").setCreationDate(YESTERDAY));
+		tagList.add(new RtcTag("uuid").setOriginalName("rc11-01").setCreationDate(TODAY));
+		tagList.add(new RtcTag("uuid").setOriginalName("v20100202").setCreationDate(TOMORROW));
+		tagList.add(new RtcTag("uuid").setOriginalName("rc11-01").setCreationDate(TOMORROW));
+		assertThat("We have two tags in the list", tagList.size(), equalTo(4));
+
+		tagList.pruneExcludedTags(Pattern.compile("^rc.*$"));
+
+		Iterator<RtcTag> tagListIterator = tagList.iterator();
+		RtcTag tag1 = tagListIterator.next();
+		RtcTag tag2 = tagListIterator.next();
+
+		assertThat("We have two tags with unique name", tag1.getName(), not(equalTo(tag2.getName())));
+		assertThat("We have two tags with the same original name", tag1.getOriginalName(),
+				equalTo(tag2.getOriginalName()));
+		assertThat("The secondly added tag has a unique name", tag2.getName(), startsWith("rc11-01_20"));
 	}
 
 	@Test

@@ -24,13 +24,11 @@ public class RtcTagList implements Iterable<RtcTag> {
 		long creationDate = tag.getCreationDate();
 		if (rtcTags.contains(tag)) {
 			tag = rtcTags.get(rtcTags.indexOf(tag));
-			if (tag.getCreationDate() > creationDate) {
-				tag.setCreationDate(creationDate / 2 + tag.getCreationDate() / 2);
-			}
+			tag.setCreationDate(creationDate / 2 + tag.getCreationDate() / 2);
 		} else {
 			for (RtcTag tagToCheck : rtcTags) {
 				if (tagToCheck.getOriginalName().equals(tag.getOriginalName())) {
-					tag.makeNameUnique();
+					tag.setMakeNameUnique(true);
 					break;
 				}
 			}
@@ -66,7 +64,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 				tmpTag = currentTag;
 			} else {
 				tmpTag.setUuid(currentTag.getUuid()).setOriginalName(currentTag.getOriginalName())
-						.setCreationDate(currentTag.getCreationDate());
+						.setCreationDate(currentTag.getCreationDate()).setMakeNameUnique(currentTag.isMakeNameUnique());
 				tmpTag.addAll(currentTag.getComponentsChangeSets());
 			}
 
@@ -109,7 +107,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 	public RtcTag getHeadTag() {
 		RtcTag tag = new RtcTag(null).setDoCreateTag(false).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE);
 		if (!rtcTags.contains(tag)) {
-			rtcTags.add(tag);
+			add(tag);
 		}
 		return tag;
 	}
