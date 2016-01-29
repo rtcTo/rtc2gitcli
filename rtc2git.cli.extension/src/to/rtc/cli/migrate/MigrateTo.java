@@ -118,14 +118,14 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get changeset information for all baselines");
 			addChangeSetInfo(tagList, repo, sourceWs, destinationWs);
 
-			tagList.printTagList(output);
+			tagList.printTagList();
 
 			output.writeLine("Filter included baselines...");
 
 			tagList.pruneExcludedTags(getBaselineIncludePattern());
 			tagList.sortByCreationDate();
 
-			tagList.printTagList(output);
+			tagList.printTagList();
 
 			if (listTagsOnly) {
 				// Stop here before migration of any data
@@ -213,7 +213,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 	private RtcTagList createTagListFromBaselines(IFilesystemRestClient client, ITeamRepository repo,
 			IWorkspace sourceWs) {
-		RtcTagList tagList = new RtcTagList();
+		RtcTagList tagList = new RtcTagList(output);
 		try {
 			IWorkspaceConnection sourceWsConnection = SCMPlatform.getWorkspaceManager(repo).getWorkspaceConnection(
 					sourceWs, getMonitor());

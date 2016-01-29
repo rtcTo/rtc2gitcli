@@ -34,7 +34,7 @@ public class RtcTagListTest {
 
 	@Before
 	public void setup() {
-		tagList = new RtcTagList();
+		tagList = new RtcTagList(new StreamOutput(System.out));
 	}
 
 	private long TODAY = (new Date()).getTime();

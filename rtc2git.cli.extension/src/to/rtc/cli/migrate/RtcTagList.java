@@ -14,9 +14,11 @@ import java.util.regex.Pattern;
 
 public class RtcTagList implements Iterable<RtcTag> {
 
+	private final StreamOutput output;
 	private List<RtcTag> rtcTags;
 
-	public RtcTagList() {
+	public RtcTagList(StreamOutput output) {
+		this.output = output;
 		rtcTags = new ArrayList<RtcTag>();
 	}
 
@@ -37,7 +39,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 		return tag;
 	}
 
-	public void printTagList(StreamOutput output) {
+	public void printTagList() {
 		output.writeLine("********** BASELINE INFOS **********");
 		int totalChangeSets = 0;
 		for (RtcTag tag : rtcTags) {
@@ -99,6 +101,9 @@ public class RtcTagList implements Iterable<RtcTag> {
 		if (rtcTags.contains(tag)) {
 			tag = rtcTags.get(rtcTags.indexOf(tag));
 		} else {
+			output.writeLine("Error: Tag could not be found in Stream");
+			output.writeLine("Searching for Tag: [" + tagName + "]");
+			printTagList();
 			throw new RuntimeException("Tag not found");
 		}
 		return tag;
