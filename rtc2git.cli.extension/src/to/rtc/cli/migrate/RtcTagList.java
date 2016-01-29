@@ -3,6 +3,7 @@
  */
 package to.rtc.cli.migrate;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -102,7 +103,9 @@ public class RtcTagList implements Iterable<RtcTag> {
 			tag = rtcTags.get(rtcTags.indexOf(tag));
 		} else {
 			output.writeLine("Error: Tag could not be found in Stream");
-			output.writeLine("Searching for Tag: [" + tagName + "]");
+			output.writeLine("Searching for Tag: [" + tagName + "] ["
+					+ (new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date(creationDate)) + "]");
+			sortByCreationDate();
 			printTagList();
 			throw new RuntimeException("Tag not found");
 		}
