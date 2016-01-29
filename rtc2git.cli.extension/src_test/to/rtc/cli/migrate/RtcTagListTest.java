@@ -89,9 +89,9 @@ public class RtcTagListTest {
 
 	@Test
 	public void testAddMakeTagsUniqueIfCreatedateDifferInDefinedRange() {
-		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE - 10000));
-		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE - 10500));
-		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(Long.MAX_VALUE - 10000));
+		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(TODAY - 10000));
+		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(TODAY - 29999));
+		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(TODAY - 10000));
 
 		assertThat("We have only one tag in the list", tagList.size(), equalTo(1));
 

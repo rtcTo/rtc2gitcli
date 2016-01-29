@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class RtcTag implements Tag {
@@ -14,7 +15,7 @@ final class RtcTag implements Tag {
 	/**
     *
     */
-	private static final int TIME_DIFFERENCE_PLUS_MINUS_MILLISECONDS = 5000;
+	private static final long TIME_DIFFERENCE_PLUS_MINUS_MILLISECONDS = TimeUnit.SECONDS.toMillis(90);
 	private static final RtcChangeSet EARLYEST_CHANGESET = new RtcChangeSet("").setCreationDate(Long.MAX_VALUE);
 	private String uuid;
 	private String originalName;
