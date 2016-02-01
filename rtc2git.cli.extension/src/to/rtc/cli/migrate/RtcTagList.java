@@ -67,7 +67,8 @@ public class RtcTagList implements Iterable<RtcTag> {
 				tmpTag = currentTag;
 			} else {
 				tmpTag.setUuid(currentTag.getUuid()).setOriginalName(currentTag.getOriginalName())
-						.setCreationDate(currentTag.getCreationDate()).setMakeNameUnique(currentTag.isMakeNameUnique());
+						.setCreationDate(currentTag.getCreationDate()).setMakeNameUnique(currentTag.isMakeNameUnique())
+						.setDoCreateTag(currentTag.doCreateTag());
 				tmpTag.addAll(currentTag.getComponentsChangeSets());
 			}
 
