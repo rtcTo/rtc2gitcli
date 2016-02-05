@@ -346,19 +346,19 @@ public final class GitMigrator implements Migrator {
 	void initialize(Properties props) {
 		properties = props;
 		commentTranslator = new CommitCommentTranslator(props);
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
-				props.getProperty("user.email", "rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
+				"rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 		// update window cache config
 		WindowCacheConfig cfg = getWindowCacheConfig();
-		cfg.setPackedGitOpenFiles(
-				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitOpenFiles((int) parseConfigValue(props.getProperty("packedgitopenfiles"),
+				cfg.getPackedGitOpenFiles()));
 		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
-		cfg.setPackedGitWindowSize(
-				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitWindowSize((int) parseConfigValue(props.getProperty("packedgitwindowsize"),
+				cfg.getPackedGitWindowSize()));
 		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
-		cfg.setDeltaBaseCacheLimit(
-				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
+		cfg.setDeltaBaseCacheLimit((int) parseConfigValue(props.getProperty("deltabasecachelimit"),
+				cfg.getDeltaBaseCacheLimit()));
 		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
 		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
 	}
@@ -372,7 +372,7 @@ public final class GitMigrator implements Migrator {
 	}
 
 	String createTagName(String tagName) {
-		return tagName.replace(' ', '_');
+		return tagName.replace(' ', '_').replace('[', '_').replace(']', '_');
 	}
 
 	@Override
