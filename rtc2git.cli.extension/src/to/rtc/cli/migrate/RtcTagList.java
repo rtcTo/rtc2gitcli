@@ -118,7 +118,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 		if (!rtcTags.contains(tag)) {
 			add(tag);
 		}
-		return tag;
+		return rtcTags.get(rtcTags.indexOf(tag));
 	}
 
 	public Boolean contains(RtcTag tag) {

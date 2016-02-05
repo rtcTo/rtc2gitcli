@@ -30,9 +30,9 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 		this.lastChangeSetReached = false;
 	}
 
-	public RtcTagList acceptInto(ChangeLogEntryDTO root) {
+	public void acceptInto(ChangeLogEntryDTO root) {
 		if (!enter(root)) {
-			return tags;
+			return;
 		}
 		for (Iterator<?> iterator = root.getChildEntries().iterator(); iterator.hasNext();) {
 			ChangeLogEntryDTO child = (ChangeLogEntryDTO) iterator.next();
@@ -41,7 +41,6 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 		}
 
 		exit(root);
-		return tags;
 	}
 
 	@Override

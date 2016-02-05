@@ -111,7 +111,7 @@ public class RtcMigrator {
 
 	private void acceptAndLoadChangeSet(RtcChangeSet changeSet) throws CLIClientException {
 		output.setIndent(2);
-		int result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, true).run();
+		int result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, false).run();
 		switch (result) {
 		case Constants.STATUS_GAP:
 			output.writeLine("Retry accepting with --accept-missing-changesets");
