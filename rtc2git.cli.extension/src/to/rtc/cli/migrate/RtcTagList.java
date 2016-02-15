@@ -40,11 +40,12 @@ public class RtcTagList implements Iterable<RtcTag> {
 		return tag;
 	}
 
-	public void printTagList() {
+	public void printTagList(boolean printChangesetDetails) {
 		output.writeLine("********** BASELINE INFOS **********");
 		int totalChangeSets = 0;
 		for (RtcTag tag : rtcTags) {
-			int totalChangeSetsByBaseline = tag.getOrderedChangeSets().size();
+			List<RtcChangeSet> orderedChangeSets = tag.getOrderedChangeSets();
+			int totalChangeSetsByBaseline = orderedChangeSets.size();
 			totalChangeSets += totalChangeSetsByBaseline;
 			output.writeLine("  Baseline [" + tag.getName() + "] with original name [" + tag.getOriginalName()
 					+ "] created at [" + (new Date(tag.getCreationDate())) + "] total number of changesets ["
@@ -52,6 +53,12 @@ public class RtcTagList implements Iterable<RtcTag> {
 			for (Entry<String, List<RtcChangeSet>> entry : tag.getComponentsChangeSets().entrySet()) {
 				output.writeLine("      number of changesets  for component [" + entry.getKey() + "] is ["
 						+ entry.getValue().size() + "]");
+			}
+			if (printChangesetDetails) {
+				for (RtcChangeSet changeSet : orderedChangeSets) {
+					output.writeLine("-- " + new Date(changeSet.getCreationDate()) + " : ["
+							+ changeSet.getCreatorName() + "] " + changeSet.getComment());
+				}
 			}
 		}
 		output.writeLine("TOTAL NUMBER OF CHANGESETS [" + totalChangeSets + "]");
@@ -107,7 +114,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 			output.writeLine("Searching for Tag: [" + tagName + "] ["
 					+ (new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date(creationDate)) + "]");
 			sortByCreationDate();
-			printTagList();
+			printTagList(false);
 			throw new RuntimeException("Tag not found");
 		}
 		return tag;

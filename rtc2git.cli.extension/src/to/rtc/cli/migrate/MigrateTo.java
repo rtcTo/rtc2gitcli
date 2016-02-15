@@ -118,7 +118,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			output.writeLine("Get changeset information for all baselines");
 			addChangeSetInfo(tagList, repo, sourceWs, destinationWs);
 
-			tagList.printTagList();
+			tagList.printTagList(listTagsOnly);
 
 			output.writeLine("Filter included baselines...");
 
@@ -127,7 +127,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			tagList.sortByCreationDate();
 			tagList.pruneExcludedTags(getBaselineIncludePattern());
 
-			tagList.printTagList();
+			tagList.printTagList(true);
 
 			if (listTagsOnly) {
 				// Stop here before migration of any data
@@ -282,8 +282,8 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 
 			List<IPathResolver> pathResolvers = new ArrayList<IPathResolver>();
 			pathResolvers.add(CopyFileAreaPathResolver.create());
-			pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
 			pathResolvers.add(SnapshotPathResolver.create(destinationSnapshotId));
+			pathResolvers.add(SnapshotPathResolver.create(sourceSnapshotId));
 			IPathResolver pathResolver = new FallbackPathResolver(pathResolvers, true);
 			clOp.setChangeLogRequest(repo, syncReport, pathResolver, customizer);
 			output.writeLine("Get list of baselines and changesets form RTC.");

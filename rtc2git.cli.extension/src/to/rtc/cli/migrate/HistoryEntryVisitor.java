@@ -7,10 +7,7 @@ import java.util.Map;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogBaselineEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogChangeSetEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogComponentEntryDTO;
-import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogDirectionEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogEntryDTO;
-import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogOslcLinkEntryDTO;
-import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogVersionableEntryDTO;
 import com.ibm.team.filesystem.common.internal.rest.client.changelog.ChangeLogWorkItemEntryDTO;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.BaseChangeLogEntryVisitor;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
@@ -19,7 +16,6 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 
 	private final RtcTagList tags;
 	private String component;
-	private RtcTag actualTag;
 	private final Map<String, String> lastChangeSets;
 	private boolean lastChangeSetReached;
 
@@ -60,46 +56,24 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 				changeSet.addWorkItem(workItem.getWorkItemNumber(), workItem.getEntryName());
 			}
 		}
-		if (actualTag == null || !actualTag.getName().equals(parent.getEntryName())) {
-			actualTag = tags.getHeadTag();
-		}
-		addToActualTag(changeSet);
+		getActualTag(parent).add(changeSet);
 		if (lastChangeSets.get(component).equals(changeSetUuid)) {
 			lastChangeSetReached = true;
 		}
 	}
 
-	private void addToActualTag(RtcChangeSet changeset) {
-		actualTag.add(changeset);
-	}
-
-	@Override
-	protected void visitBaseline(ChangeLogEntryDTO parent, ChangeLogBaselineEntryDTO dto) {
-		if (lastChangeSetReached) {
-			return;
+	private RtcTag getActualTag(ChangeLogEntryDTO parent) {
+		if (parent instanceof ChangeLogBaselineEntryDTO) {
+			final ChangeLogBaselineEntryDTO dto = (ChangeLogBaselineEntryDTO) parent;
+			return tags.getTag(dto.getItemId(), dto.getEntryName(), dto.getCreationDate());
+		} else {
+			return tags.getHeadTag();
 		}
-		actualTag = tags.getTag(dto.getItemId(), dto.getEntryName(), dto.getCreationDate());
 	}
 
 	@Override
 	protected void visitComponent(ChangeLogEntryDTO parent, ChangeLogComponentEntryDTO dto) {
 		component = dto.getEntryName();
 		lastChangeSetReached = false;
-	}
-
-	@Override
-	protected void visitDirection(ChangeLogEntryDTO parent, ChangeLogDirectionEntryDTO dto) {
-	}
-
-	@Override
-	protected void visitOslcLink(ChangeLogEntryDTO parent, ChangeLogOslcLinkEntryDTO dto) {
-	}
-
-	@Override
-	protected void visitVersionable(ChangeLogEntryDTO parent, ChangeLogVersionableEntryDTO dto) {
-	}
-
-	@Override
-	protected void visitWorkItem(ChangeLogEntryDTO parent, ChangeLogWorkItemEntryDTO dto, boolean inChangeSet) {
 	}
 }
