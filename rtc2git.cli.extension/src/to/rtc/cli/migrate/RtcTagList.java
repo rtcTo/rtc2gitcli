@@ -56,7 +56,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 			}
 			if (printChangesetDetails) {
 				for (RtcChangeSet changeSet : orderedChangeSets) {
-					output.writeLine("-- " + new Date(changeSet.getCreationDate()) + " : ["
+					output.writeLine("        -- " + new Date(changeSet.getCreationDate()) + " : ["
 							+ changeSet.getCreatorName() + "] " + changeSet.getComment());
 				}
 			}
