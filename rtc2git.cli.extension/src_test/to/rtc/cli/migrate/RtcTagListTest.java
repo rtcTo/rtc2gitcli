@@ -7,6 +7,7 @@
 package to.rtc.cli.migrate;
 
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -94,6 +95,46 @@ public class RtcTagListTest {
 		tagList.add(new RtcTag("uuid").setOriginalName("TagNameUnique").setCreationDate(TODAY - 10000));
 
 		assertThat("We have only one tag in the list", tagList.size(), equalTo(1));
+
+	}
+
+	@Test
+	public void testKeepOnlyActiveTags() {
+		RtcTag tag1 = new RtcTag("uuid").setOriginalName("TagName_1").setCreationDate(TODAY - 7000);
+		RtcTag tag2 = new RtcTag("uuid").setOriginalName("TagName_2").setCreationDate(TODAY - 6000);
+		RtcTag tag3 = new RtcTag("uuid").setOriginalName("TagName_3").setCreationDate(TODAY - 5000)
+				.setContainLastChangeset(true);
+		RtcTag tag4 = new RtcTag("uuid").setOriginalName("TagName_4").setCreationDate(TODAY - 4000);
+		RtcTag tag5 = new RtcTag("uuid").setOriginalName("TagName_5").setCreationDate(TODAY - 3000)
+				.setContainLastChangeset(true);
+		RtcTag tag6 = new RtcTag("uuid").setOriginalName("TagName_6").setCreationDate(TODAY - 2000);
+		RtcTag tag7 = new RtcTag("uuid").setOriginalName("TagName_7").setCreationDate(TODAY - 1000);
+		tagList.add(tag1);
+		tagList.add(tag2);
+		tagList.add(tag3);
+		tagList.add(tag4);
+		tagList.add(tag5);
+		tagList.add(tag6);
+		tagList.add(tag7);
+
+		tagList.sortByCreationDate();
+		tagList.pruneInactiveTags();
+
+		assertThat("We tag only active tags in the list", tagList.size(), equalTo(7));
+		assertThat("Tag 1 will be tagged",
+				tagList.getTag(tag1.getName(), tag1.getOriginalName(), tag1.getCreationDate()).doCreateTag(), is(true));
+		assertThat("Tag 2 will be tagged",
+				tagList.getTag(tag2.getName(), tag2.getOriginalName(), tag2.getCreationDate()).doCreateTag(), is(true));
+		assertThat("Tag 3 will be tagged",
+				tagList.getTag(tag3.getName(), tag3.getOriginalName(), tag3.getCreationDate()).doCreateTag(), is(true));
+		assertThat("Tag 4 will be tagged",
+				tagList.getTag(tag4.getName(), tag4.getOriginalName(), tag4.getCreationDate()).doCreateTag(), is(true));
+		assertThat("Tag 5 will be tagged",
+				tagList.getTag(tag5.getName(), tag5.getOriginalName(), tag5.getCreationDate()).doCreateTag(), is(true));
+		assertThat("Tag 6 will NOT be tagged",
+				tagList.getTag(tag6.getName(), tag6.getOriginalName(), tag6.getCreationDate()).doCreateTag(), is(false));
+		assertThat("Tag 7 will NOT be tagged",
+				tagList.getTag(tag7.getName(), tag7.getOriginalName(), tag7.getCreationDate()).doCreateTag(), is(false));
 
 	}
 
