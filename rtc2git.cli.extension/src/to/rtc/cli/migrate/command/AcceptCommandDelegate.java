@@ -53,6 +53,9 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 				case Constants.STATUS_WORKSPACE_UNCHANGED:
 					printExceptionMessage("WORKSPACE_UNCHANGED", status);
 					return Constants.STATUS_WORKSPACE_UNCHANGED;
+				case Constants.STATUS_OUT_OF_SYNC:
+					printExceptionMessage("WORKSPACE_OUT_OF_SYNC", status);
+					return Constants.STATUS_OUT_OF_SYNC;
 				default:
 					output.writeLine("There was an unexpected exception with state [" + status.getCode() + "]("
 							+ status.getMessage() + ")");

@@ -56,9 +56,11 @@ public class HistoryEntryVisitor extends BaseChangeLogEntryVisitor {
 				changeSet.addWorkItem(workItem.getWorkItemNumber(), workItem.getEntryName());
 			}
 		}
-		getActualTag(parent).add(changeSet);
+		RtcTag actualTag = getActualTag(parent);
+		actualTag.add(changeSet);
 		if (lastChangeSets.get(component).equals(changeSetUuid)) {
 			lastChangeSetReached = true;
+			actualTag.setContainLastChangeset(true);
 		}
 	}
 

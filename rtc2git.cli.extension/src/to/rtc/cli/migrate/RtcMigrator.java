@@ -113,10 +113,14 @@ public class RtcMigrator {
 		output.setIndent(2);
 		int result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, false).run();
 		switch (result) {
+		case Constants.STATUS_OUT_OF_SYNC:
+			output.writeLine("Try loading of workspace again with force option");
+			result = new LoadCommandDelegate(config, output, workspace, null, true).run();
+			break;
 		case Constants.STATUS_GAP:
 			output.writeLine("Retry accepting with --accept-missing-changesets");
 			result = new AcceptCommandDelegate(config, output, workspace, changeSet.getUuid(), false, true).run();
-			if (Constants.STATUS_GAP == result) {
+			if (Constants.STATUS_GAP == result || Constants.STATUS_OUT_OF_SYNC == result) {
 				throw new CLIClientException("There was a PROBLEM in accepting that we cannot solve.");
 			}
 			break;

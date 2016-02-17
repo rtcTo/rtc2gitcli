@@ -24,6 +24,7 @@ final class RtcTag implements Tag {
 	private final Map<String, List<RtcChangeSet>> components;
 	private long totalChangeSetCount;
 	private boolean doCreateTag;
+	private boolean containLastChangeset;
 
 	RtcTag(String uuid) {
 		this.uuid = uuid;
@@ -31,6 +32,7 @@ final class RtcTag implements Tag {
 		totalChangeSetCount = 0;
 		makeNameUnique = false;
 		doCreateTag = true;
+		containLastChangeset = false;
 	}
 
 	RtcTag setCreationDate(long creationDate) {
@@ -127,6 +129,10 @@ final class RtcTag implements Tag {
 		return makeNameUnique;
 	}
 
+	boolean isContainingLastChangeset() {
+		return containLastChangeset;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -186,5 +192,10 @@ final class RtcTag implements Tag {
 
 	boolean doCreateTag() {
 		return doCreateTag;
+	}
+
+	RtcTag setContainLastChangeset(boolean containLastChangeset) {
+		this.containLastChangeset = containLastChangeset;
+		return this;
 	}
 }

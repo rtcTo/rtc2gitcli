@@ -125,6 +125,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			// Sorting is required berore pruning if migration from multiple components should be done. Otherwise tags
 			// of some code could be wrong.
 			tagList.sortByCreationDate();
+			tagList.pruneInactiveTags();
 			tagList.pruneExcludedTags(getBaselineIncludePattern());
 
 			tagList.printTagList(true);

@@ -65,6 +65,23 @@ public class RtcTagList implements Iterable<RtcTag> {
 		output.writeLine("********** BASELINE INFOS **********");
 	}
 
+	public void pruneInactiveTags() {
+		RtcTag lastTagThatRequiresTagging = null;
+		for (RtcTag tag : rtcTags) {
+			if (tag.isContainingLastChangeset()) {
+				lastTagThatRequiresTagging = tag;
+			}
+
+		}
+		boolean lastTagReached = false;
+		for (RtcTag tag : rtcTags) {
+			tag.setDoCreateTag(!lastTagReached);
+			if (tag.equals(lastTagThatRequiresTagging)) {
+				lastTagReached = true;
+			}
+		}
+	}
+
 	public void pruneExcludedTags(Pattern includePattern) {
 		List<RtcTag> prunedList = new ArrayList<RtcTag>();
 		RtcTag tmpTag = null;
