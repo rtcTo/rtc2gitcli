@@ -153,6 +153,7 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			for (RtcTag tag : tagList) {
 				if (isUpdateMigration && isFirstTag && tag.isEmpty()) {
 					output.writeLine("Ignore migration of tag [" + tag.toString() + "] because it is empty.");
+					tagCounter++;
 					continue;
 				}
 				isFirstTag = false;
