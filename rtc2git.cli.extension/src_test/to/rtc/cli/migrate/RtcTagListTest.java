@@ -176,6 +176,7 @@ public class RtcTagListTest {
 	@Test
 	public void testHeadTagWillNotBeTagged() {
 		RtcTag headTag = tagList.getHeadTag();
+		tagList.pruneInactiveTags();
 
 		assertThat("HEAD tag will never be tagged", headTag.doCreateTag(), equalTo(false));
 

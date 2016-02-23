@@ -75,7 +75,7 @@ public class RtcTagList implements Iterable<RtcTag> {
 		}
 		boolean lastTagReached = false;
 		for (RtcTag tag : rtcTags) {
-			tag.setDoCreateTag(!lastTagReached);
+			tag.setDoCreateTag(!lastTagReached && tag.doCreateTag());
 			if (tag.equals(lastTagThatRequiresTagging)) {
 				lastTagReached = true;
 			}
