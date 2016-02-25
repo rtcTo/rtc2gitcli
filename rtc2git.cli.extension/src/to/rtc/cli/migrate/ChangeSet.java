@@ -40,7 +40,7 @@ public interface ChangeSet {
 	/**
 	 * Returns the list of all work items connected to that change set.
 	 * 
-	 * @return the refered work items
+	 * @return the referenced work items
 	 */
 	public List<WorkItem> getWorkItems();
 
