@@ -196,18 +196,21 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 		IItemManager itemManager = repo.itemManager();
 		Map<String, String> lastChangeSets = new HashMap<String, String>();
 		try {
-			sourceWsConnection = workspaceManager.getWorkspaceConnection(sourceWs, getMonitor());
+			IProgressMonitor monitor = getMonitor();
+			sourceWsConnection = workspaceManager.getWorkspaceConnection(sourceWs, monitor);
 			@SuppressWarnings("unchecked")
 			List<IComponentHandle> componentHandles = sourceWsConnection.getComponents();
 			@SuppressWarnings("unchecked")
 			List<IComponent> components = itemManager.fetchCompleteItems(componentHandles, componentHandles.size(),
-					getMonitor());
+					monitor);
 			for (IComponent component : components) {
 				@SuppressWarnings("unchecked")
-				List<ClientChangeSetEntry> changeSets = sourceWsConnection.changeHistory(component)
-						.recent(getMonitor());
-				IChangeSetHandle changeSetHandle = changeSets.get(changeSets.size() - 1).changeSet();
-				lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
+				List<ClientChangeSetEntry> changeSets = sourceWsConnection.changeHistory(component).recent(monitor);
+				// select first change set if there are any
+				if (!changeSets.isEmpty()) {
+					IChangeSetHandle changeSetHandle = changeSets.get(changeSets.size() - 1).changeSet();
+					lastChangeSets.put(component.getName(), changeSetHandle.getItemId().getUuidValue());
+				}
 			}
 		} catch (TeamRepositoryException e) {
 			e.printStackTrace(output.getOutputStream());
