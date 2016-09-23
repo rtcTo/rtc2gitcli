@@ -90,8 +90,9 @@ final class RtcTag implements Tag {
 		for (Entry<String, List<RtcChangeSet>> entry : components.entrySet()) {
 			AtomicInteger index = changeSetOrderIndex.get(entry.getKey());
 			List<RtcChangeSet> changeSets = entry.getValue();
-			if (index.get() < changeSets.size()) {
-				RtcChangeSet changeSet = changeSets.get(index.get());
+			int changeSetIndex = index.get();
+			if (changeSetIndex < changeSets.size()) {
+				RtcChangeSet changeSet = changeSets.get(changeSetIndex);
 				if (earlyestChangeSet.getCreationDate() > changeSet.getCreationDate()) {
 					earlyestChangeSet = changeSet;
 				}

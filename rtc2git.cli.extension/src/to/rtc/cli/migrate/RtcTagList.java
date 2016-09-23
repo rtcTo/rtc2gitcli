@@ -25,10 +25,8 @@ public class RtcTagList implements Iterable<RtcTag> {
 
 	public RtcTag add(RtcTag tag) {
 		long creationDate = tag.getCreationDate();
-		if (rtcTags.contains(tag)) {
-			tag = rtcTags.get(rtcTags.indexOf(tag));
-			tag.setCreationDate(creationDate / 2 + tag.getCreationDate() / 2);
-		} else {
+		int tagIndex = rtcTags.indexOf(tag);
+		if (tagIndex < 0) {
 			for (RtcTag tagToCheck : rtcTags) {
 				if (tagToCheck.getOriginalName().equals(tag.getOriginalName())) {
 					tag.setMakeNameUnique(true);
@@ -36,6 +34,9 @@ public class RtcTagList implements Iterable<RtcTag> {
 				}
 			}
 			rtcTags.add(tag);
+		} else {
+			tag = rtcTags.get(tagIndex);
+			tag.setCreationDate(creationDate / 2 + tag.getCreationDate() / 2);
 		}
 		return tag;
 	}
@@ -124,25 +125,29 @@ public class RtcTagList implements Iterable<RtcTag> {
 
 	public RtcTag getTag(String itemId, String tagName, long creationDate) {
 		RtcTag tag = new RtcTag(itemId).setOriginalName(tagName).setCreationDate(creationDate);
-		if (rtcTags.contains(tag)) {
-			tag = rtcTags.get(rtcTags.indexOf(tag));
-		} else {
+		int tagIndex = rtcTags.indexOf(tag);
+		if (tagIndex < 0) {
 			output.writeLine("Error: Tag could not be found in Stream");
 			output.writeLine("Searching for Tag: [" + tagName + "] ["
 					+ (new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date(creationDate)) + "]");
 			sortByCreationDate();
 			printTagList(false);
 			throw new RuntimeException("Tag not found");
+		} else {
+			tag = rtcTags.get(tagIndex);
 		}
 		return tag;
 	}
 
 	public RtcTag getHeadTag() {
 		RtcTag tag = new RtcTag(null).setDoCreateTag(false).setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE);
-		if (!rtcTags.contains(tag)) {
+		int tagIndex = rtcTags.indexOf(tag);
+		if (tagIndex < 0) {
 			add(tag);
+		} else {
+			tag = rtcTags.get(tagIndex);
 		}
-		return rtcTags.get(rtcTags.indexOf(tag));
+		return tag;
 	}
 
 	public Boolean contains(RtcTag tag) {
