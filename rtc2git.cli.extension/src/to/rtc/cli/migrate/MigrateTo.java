@@ -18,6 +18,7 @@ import com.ibm.team.filesystem.cli.core.util.RepoUtil;
 import com.ibm.team.filesystem.cli.core.util.RepoUtil.ItemType;
 import com.ibm.team.filesystem.cli.core.util.SubcommandUtil;
 import com.ibm.team.filesystem.client.FileSystemException;
+import com.ibm.team.filesystem.client.internal.PathLocation;
 import com.ibm.team.filesystem.client.internal.snapshot.FlowType;
 import com.ibm.team.filesystem.client.internal.snapshot.SnapshotId;
 import com.ibm.team.filesystem.client.internal.snapshot.SnapshotSyncReport;
@@ -145,8 +146,12 @@ public abstract class MigrateTo extends AbstractSubcommand implements ISubcomman
 			Migrator migrator = getMigrator();
 			migrator.init(sandboxDirectory);
 
+			Map<String, String> destinationWsComponents = RepoUtil.getComponentsInSandbox(
+					destinationWs.getItemId().getUuidValue(), new PathLocation(sandboxDirectory.getAbsolutePath()),
+					client, config);
+
 			RtcMigrator rtcMigrator = new RtcMigrator(output, config, destinationWsOption.getStringValue(), migrator,
-					sandboxDirectory, isUpdateMigration);
+					sandboxDirectory, destinationWsComponents.values(), isUpdateMigration);
 			boolean isFirstTag = true;
 			int numberOfTags = tagList.size();
 			int tagCounter = 0;
