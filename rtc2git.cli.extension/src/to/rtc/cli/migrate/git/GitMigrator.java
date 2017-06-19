@@ -109,9 +109,9 @@ public final class GitMigrator implements Migrator {
 		}
 	}
 
-	String getCommitMessage(String workItemText, String comment) {
-		return String.format(properties.getProperty("commit.message.format", "%1s %2s"), workItemText,
-				commentTranslator.translate(comment)).trim();
+	String getCommitMessage(String workItemNumbers, String comment, String workItemTexts) {
+		return String.format(properties.getProperty("commit.message.format", "%1s %2s"), workItemNumbers,
+				commentTranslator.translate(comment), workItemTexts).trim();
 	}
 
 	List<String> getGitattributeLines() {
@@ -128,11 +128,22 @@ public final class GitMigrator implements Migrator {
 		return WindowCacheConfig;
 	}
 
+	String getCommentText(ChangeSet changeSet) {
+		String comment = changeSet.getComment();
+		String workItemText = changeSet.getWorkItems().isEmpty() ? "" : changeSet.getWorkItems().get(0).getText();
+		final boolean substituteWorkItemText = Boolean
+				.valueOf(properties.getProperty("rtc.changeset.comment.substitute", Boolean.FALSE.toString()));
+		if (comment.isEmpty() && substituteWorkItemText)
+			return workItemText;
+		final String format = properties.getProperty("rtc.changeset.comment.format", "%1s");
+		return String.format(format, comment, workItemText);
+	}
+
 	String getWorkItemNumbers(List<WorkItem> workItems) {
 		if (workItems.isEmpty()) {
 			return "";
 		}
-		final String format = properties.getProperty("rtc.workitem.number.format", "%s");
+		final String format = properties.getProperty("rtc.workitem.number.format", "%1s");
 		final String delimiter = properties.getProperty("rtc.workitem.number.delimiter", " ");
 		final StringBuilder sb = new StringBuilder();
 		boolean isFirst = true;
@@ -145,6 +156,32 @@ public final class GitMigrator implements Migrator {
 					sb.append(delimiter);
 				}
 				formatter.format(format, String.valueOf(workItem.getNumber()));
+			}
+
+		} finally {
+			formatter.close();
+		}
+		return sb.toString();
+	}
+
+	String getWorkItemTexts(List<WorkItem> workItems) {
+		if (workItems.isEmpty()) {
+			return "";
+		}
+		final String format = properties.getProperty("rtc.workitem.text.format", "%1s %2s");
+		final String delimiter = properties.getProperty("rtc.workitem.text.delimiter",
+				System.getProperty("line.separator"));
+		final StringBuilder sb = new StringBuilder();
+		boolean isFirst = true;
+		Formatter formatter = new Formatter(sb);
+		try {
+			for (WorkItem workItem : workItems) {
+				if (isFirst) {
+					isFirst = false;
+				} else {
+					sb.append(delimiter);
+				}
+				formatter.format(format, String.valueOf(workItem.getNumber()), workItem.getText());
 			}
 
 		} finally {
@@ -346,19 +383,19 @@ public final class GitMigrator implements Migrator {
 	void initialize(Properties props) {
 		properties = props;
 		commentTranslator = new CommitCommentTranslator(props);
-		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"), props.getProperty("user.email",
-				"rtc2git@rtc.to"));
+		defaultIdent = new PersonIdent(props.getProperty("user.name", "RTC 2 git"),
+				props.getProperty("user.email", "rtc2git@rtc.to"));
 		parseElements(props.getProperty("ignore.file.extensions", ""), ignoredFileExtensions);
 		// update window cache config
 		WindowCacheConfig cfg = getWindowCacheConfig();
-		cfg.setPackedGitOpenFiles((int) parseConfigValue(props.getProperty("packedgitopenfiles"),
-				cfg.getPackedGitOpenFiles()));
+		cfg.setPackedGitOpenFiles(
+				(int) parseConfigValue(props.getProperty("packedgitopenfiles"), cfg.getPackedGitOpenFiles()));
 		cfg.setPackedGitLimit(parseConfigValue(props.getProperty("packedgitlimit"), cfg.getPackedGitLimit()));
-		cfg.setPackedGitWindowSize((int) parseConfigValue(props.getProperty("packedgitwindowsize"),
-				cfg.getPackedGitWindowSize()));
+		cfg.setPackedGitWindowSize(
+				(int) parseConfigValue(props.getProperty("packedgitwindowsize"), cfg.getPackedGitWindowSize()));
 		cfg.setPackedGitMMAP(Boolean.parseBoolean(props.getProperty("packedgitmmap")));
-		cfg.setDeltaBaseCacheLimit((int) parseConfigValue(props.getProperty("deltabasecachelimit"),
-				cfg.getDeltaBaseCacheLimit()));
+		cfg.setDeltaBaseCacheLimit(
+				(int) parseConfigValue(props.getProperty("deltabasecachelimit"), cfg.getDeltaBaseCacheLimit()));
 		long sft = parseConfigValue(props.getProperty("streamfilethreshold"), cfg.getStreamFileThreshold());
 		cfg.setStreamFileThreshold(getMaxFileThresholdValue(sft, Runtime.getRuntime().maxMemory()));
 	}
@@ -425,8 +462,11 @@ public final class GitMigrator implements Migrator {
 
 	@Override
 	public void commitChanges(ChangeSet changeset) {
-		gitCommit(new PersonIdent(changeset.getCreatorName(), changeset.getEmailAddress(), changeset.getCreationDate(),
-				0), getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()), changeset.getComment()));
+		gitCommit(
+				new PersonIdent(changeset.getCreatorName(), changeset.getEmailAddress(), changeset.getCreationDate(),
+						0),
+				getCommitMessage(getWorkItemNumbers(changeset.getWorkItems()), getCommentText(changeset),
+						getWorkItemTexts(changeset.getWorkItems())));
 	}
 
 	@Override
