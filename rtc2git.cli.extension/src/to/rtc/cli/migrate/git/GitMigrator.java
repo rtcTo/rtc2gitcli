@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
@@ -24,6 +25,7 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RmCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.Config;
 import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.storage.file.WindowCacheConfig;
@@ -43,6 +45,7 @@ import to.rtc.cli.migrate.util.JazzignoreTranslator;
  * @author patrick.reinhart
  */
 public final class GitMigrator implements Migrator {
+	private static final String GIT_CONFIG_PREFIX = "git.config.";
 	static final List<String> ROOT_IGNORED_ENTRIES = Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata");
 	static final Pattern GITIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.gitignore$");
 	static final Pattern JAZZIGNORE_PATTERN = Pattern.compile("(^.*(/|))\\.jazzignore$");
@@ -316,6 +319,7 @@ public final class GitMigrator implements Migrator {
 		config.setString("core", null, "autocrlf", File.separatorChar == '/' ? "input" : "true");
 		config.setBoolean("http", null, "sslverify", false);
 		config.setString("push", null, "default", "simple");
+		fillConfigFromProperties(config);
 		config.save();
 	}
 
@@ -440,6 +444,26 @@ public final class GitMigrator implements Migrator {
 			} catch (Exception e) {
 				throw new RuntimeException("Unable to tag", e);
 			}
+		}
+	}
+
+	private void fillConfigFromProperties(Config config) {
+		for (Entry<Object, Object> entry : properties.entrySet()) {
+			if (entry.getKey() instanceof String && (((String) entry.getKey()).startsWith(GIT_CONFIG_PREFIX))) {
+
+				String key = ((String) entry.getKey()).substring(GIT_CONFIG_PREFIX.length());
+				int dot = key.indexOf('.');
+				int dot1 = key.lastIndexOf('.');
+				// so far supporting section/key entries, no subsections
+				if (dot < 1 || dot == key.length() - 1 || dot1 != dot) {
+					// invalid config key entry
+					continue;
+				}
+				String section = key.substring(0, dot);
+				String name = key.substring(dot + 1);
+				config.setString(section, null, name, entry.getValue().toString());
+			}
+
 		}
 	}
 }
