@@ -1,0 +1,75 @@
+= Tool to migrate from IBM RTC to Git
+:project-full-path: rtcTo/rtc2gitcli
+:github-branch: master
+:rtc2gitwiki: https://github.com/rtcTo/rtc2git/wiki
+:rtc2gitcliwiki: https://github.com/rtcTo/rtc2gitcli/wiki
+image:https://img.shields.io/badge/license-MIT-blue.svg["MIT License", link="https://github.com/{project-full-path}/blob/{github-branch}/LICENSE"]
+image:https://img.shields.io/badge/Java-8-blue.svg["Supported Versions", link="https://travis-ci.org/{project-full-path}"]
+
+A tool made for migrating code from an existing https://jazz.net/products/rational-team-concert/[IBM RTC] into a Git repository.
+Inspired by https://github.com/{project-full-path}[rtc2git], but written in Java and hopefully faster. It is implemented as `scm cli` plugin.
+
+
+== Prerequirements
+- *https://jazz.net/downloads/rational-team-concert/releases/5.0.1?p=allDownloads[SCM Tools]* from IBM. To avoid an
+  account creation on jazz.net site, you could use http://bugmenot.com/[bugmenot] (see also wiki page ({rtc2gitwiki}/configure-RTC-CLI[configure RTC CLI])
+- Eclipse configured with scm tools as target platform (see wiki {rtc2gitcliwiki}/configure-target-platform[configure scm tools target platform])
+
+== Usage
+- create an source RTC workspace with flow target and components as wanted -> `SOURCE_WORKSPACE`
+- create an target RTC workspace with `SOURCE_WORKPSACE` as flow target -> `TARGET_WORKSPACE`
+- check comments at {rtc2gitcliwiki}/configure-rtc-workspaces[configure rtc workspaces]
+- open shell or cmd
+- step into the target directory
+- load the initial target workspace:
+
+[source,bash]
+----
+scm load -r <uri> -u <username> -P <password> <TARGET_WORKSPACE>
+----
+
+Execute the actual migration:
+
+[source,bash]
+----
+scm migrate-to-git -r <uri> -u <username> -P <password> -m <migration.properties> <SOURCE_WORKSPACE> <TARGET_WORKSPACE>
+----
+
+== How does it work?
+1. It initalizes an empty git repository and clones it
+2. In this repository, it loads `TARGET_WORKSPACE` RTC workspace
+3. Every change set is accepted
+4. If there is a baseline on the change set, a tag is created on git
+5. The change set is committed to git
+
+
+== Eclipse requirements
+In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` as your first
+step. Then unpack a SCM Tools as downloaded into the Eclipse workspace directory. As soon you have done this step you are able to import the actual 
+`rtc2git.cli.extension` project. When you got compile errors, make sure to
+select `*rtc2git*` as your default Target Platform.
+
+=== Setup Eclipse development environment
+In order to enhance the the migration tool or fix a bug that you may encounter here are the steps to set up a development environment
+
+- Configure SCMTools Target Platform described here in the {rtc2gitcliwiki}[wiki]. Point to the folder where your `scm.exe`/`lscm.bat` is
+  (If you use eclipse classic aka non javaee eclipse, install the Eclipse Plugin Development Tools as described
+- Clone this repo and import it in eclipse as maven project
+- Open `pom.xml` and follow the hint to install the missing maven connector
+- Update maven project using [ALT]+[F5]
+- By this point the project shouldnt contain any errors (make sure you have still your created target platform in window preference selected)
+- You should have an launch-configuration named rtc2git -> start it
+- In your console window you should see _"Help for: scm migrate-to-git"_
+- Open the launch-config and edit the command in arguments/program arguments
+
+
+== Wiki
+For more details {rtc2gitcliwiki}[visit our wiki]
+
+== Links for JGit
+- http://download.eclipse.org/jgit/docs/jgit-3.3.0.201403021825-r/apidocs/?d[api docs]
+- https://github.com/centic9/jgit-cookbook[jgit cookbook]
+- http://wiki.eclipse.org/JGit/User_Guide[User Guide]
+
+== Contribute & Feedback
+Feel free to report and/or fix https://github.com/rtcTo/rtc2gitcli/issues[issues] or create new pull requests
