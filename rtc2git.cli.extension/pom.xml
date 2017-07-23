@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>to.rtc</groupId>
   <artifactId>cli.extension</artifactId>
-  <version>0.0.1</version>
+  <version>1.0.1</version>
   <dependencies>
     <dependency>
       <groupId>org.eclipse.jgit</groupId>
@@ -62,7 +62,7 @@
   <name>RTC to git migration extension</name>
   <organization>
     <name>rtc.to</name>
-    <url>http://rtc.to</url>
+    <url>https://rtc.to</url>
   </organization>
   <scm>
     <url>git@github.com:rtcTo/rtc2gitcli.git</url>
