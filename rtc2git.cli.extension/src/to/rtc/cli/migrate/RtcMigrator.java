@@ -1,6 +1,7 @@
 package to.rtc.cli.migrate;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -26,18 +27,17 @@ public class RtcMigrator {
 	private final IScmClientConfiguration config;
 	private final String workspace;
 	private final Migrator migrator;
-	private static final Set<String> initiallyLoadedComponents = new HashSet<String>();
+	private final Set<String> initiallyLoadedComponents;
 	private File sandboxDirectory;
-	private final boolean isUpdateMigration;
 
 	public RtcMigrator(IChangeLogOutput output, IScmClientConfiguration config, String workspace, Migrator migrator,
-			File sandboxDirectory, boolean isUpdateMigration) {
+			File sandboxDirectory, Collection<String> initiallyLoadedComponents, boolean isUpdateMigration) {
 		this.output = output;
 		this.config = config;
 		this.workspace = workspace;
 		this.migrator = migrator;
 		this.sandboxDirectory = sandboxDirectory;
-		this.isUpdateMigration = isUpdateMigration;
+		this.initiallyLoadedComponents = new HashSet<String>(initiallyLoadedComponents);
 	}
 
 	public void migrateTag(RtcTag tag) throws CLIClientException {
@@ -132,9 +132,9 @@ public class RtcMigrator {
 	private void handleInitialLoad(RtcChangeSet changeSet) {
 		if (!initiallyLoadedComponents.contains(changeSet.getComponent())) {
 			try {
-				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), isUpdateMigration).run();
+				new LoadCommandDelegate(config, output, workspace, changeSet.getComponent(), false).run();
 				initiallyLoadedComponents.add(changeSet.getComponent());
-			} catch (CLIClientException e) { // ignore
+			} catch (CLIClientException e) {
 				throw new RuntimeException("Not a valid sandbox. Please run [scm load " + workspace
 						+ "] before [scm migrate-to-git] command");
 			}
