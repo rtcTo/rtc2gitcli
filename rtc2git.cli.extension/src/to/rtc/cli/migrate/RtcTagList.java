@@ -151,6 +151,6 @@ public class RtcTagList implements Iterable<RtcTag> {
 	}
 
 	public Boolean contains(RtcTag tag) {
-		return rtcTags.contains(tag);
+		return Boolean.valueOf(rtcTags.contains(tag));
 	}
 }
