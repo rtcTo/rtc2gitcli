@@ -1,6 +1,7 @@
 = Tool to migrate from IBM RTC to Git
 :project-full-path: rtcTo/rtc2gitcli
 :github-branch: master
+:rtcversion: 6.0.4
 :rtc2gitwiki: https://github.com/rtcTo/rtc2git/wiki
 :rtc2gitcliwiki: https://github.com/rtcTo/rtc2gitcli/wiki
 image:https://img.shields.io/badge/license-MIT-blue.svg["MIT License", link="https://github.com/{project-full-path}/blob/{github-branch}/LICENSE"]
@@ -11,7 +12,7 @@ Inspired by https://github.com/{project-full-path}[rtc2git], but written in Java
 
 
 == Prerequirements
-- *https://jazz.net/downloads/rational-team-concert/releases/5.0.1?p=allDownloads[SCM Tools]* from IBM. To avoid an
+- *https://jazz.net/downloads/rational-team-concert/releases/{rtcversion}?p=allDownloads[SCM Tools]* from IBM. To avoid an
   account creation on jazz.net site, you could use http://bugmenot.com/[bugmenot] (see also wiki page ({rtc2gitwiki}/configure-RTC-CLI[configure RTC CLI])
 - Eclipse configured with scm tools as target platform (see wiki {rtc2gitcliwiki}/configure-target-platform[configure scm tools target platform])
 
