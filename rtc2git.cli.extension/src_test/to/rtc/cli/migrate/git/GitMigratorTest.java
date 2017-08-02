@@ -141,7 +141,7 @@ public class GitMigratorTest {
 		props.setProperty("commit.message.replacement.1", "BUG-$1 $2");
 		migrator.initialize(props);
 
-			assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga", ""));
+		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga", ""));
 	}
 
 	@Test
