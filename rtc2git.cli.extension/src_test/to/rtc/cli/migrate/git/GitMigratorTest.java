@@ -2,10 +2,7 @@ package to.rtc.cli.migrate.git;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -144,7 +141,7 @@ public class GitMigratorTest {
 		props.setProperty("commit.message.replacement.1", "BUG-$1 $2");
 		migrator.initialize(props);
 
-		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga"));
+		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga", ""));
 	}
 
 	@Test
@@ -153,7 +150,17 @@ public class GitMigratorTest {
 		migrator.init(basedir);
 		String lf = System.getProperty("line.separator");
 
-		assertEquals("gug%us" + lf + lf + "ga%ga", migrator.getCommitMessage("gug%us", "ga%ga"));
+		assertEquals("gug%us" + lf + lf + "ga%ga", migrator.getCommitMessage("gug%us", "ga%ga", ""));
+	}
+
+	@Test
+	public void testGetCommitMessage_withCustomFormat1() {
+		props.setProperty("commit.message.format", "%1s%n%n%2s%n%n%3s");
+		migrator.init(basedir);
+		String lf = System.getProperty("line.separator");
+
+		assertEquals("gug%us" + lf + lf + "ga%ga" + lf + lf + "gi%gl",
+				migrator.getCommitMessage("gug%us", "ga%ga", "gi%gl"));
 	}
 
 	@Test
