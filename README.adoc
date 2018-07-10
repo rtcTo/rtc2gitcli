@@ -43,18 +43,12 @@ scm migrate-to-git -r <uri> -u <username> -P <password> -m <migration.properties
 4. If there is a baseline on the change set, a tag is created on git
 5. The change set is committed to git
 
-
-== Eclipse requirements
-In order to have a common coding style across multiple versions of Eclipse import the `eclipse-rtccli-format-settings.xml` as your first
-step. Then unpack a SCM Tools as downloaded into the Eclipse workspace directory. As soon you have done this step you are able to import the actual 
-`rtc2git.cli.extension` project. When you got compile errors, make sure to
-select `*rtc2git*` as your default Target Platform.
-
 === Setup Eclipse development environment
-In order to enhance the the migration tool or fix a bug that you may encounter here are the steps to set up a development environment
+In order to enhance the the migration tool, fix a bug that you may encounter or simply want to run it from your eclipse, here are the steps to set up a development environment:
 
-- Configure SCMTools Target Platform described here in the {rtc2gitcliwiki}[wiki]. Point to the folder where your `scm.exe`/`lscm.bat` is
-  (If you use eclipse classic aka non javaee eclipse, install the Eclipse Plugin Development Tools as described
+- Import Code Style (Window->Preferences->Java->Code Style->Formatter) `eclipse-rtccli-format-settings.xml` in order to have a common coding style (you can skip this step if you only want to run it)
+- Configure SCMTools Target Platform described here in the {rtc2gitcliwiki}/configure-target-platform[wiki]. Point to the folder where your `scm.exe`/`lscm.bat` is
+  (If you use eclipse classic aka non javaee eclipse, install the Eclipse Plugin Development Tools as described {rtc2gitcliwiki}/configure-target-platform#help---there-is-no-target-platform[here])
 - Clone this repo and import it in eclipse as maven project
 - Open `pom.xml` and follow the hint to install the missing maven connector
 - Update maven project using [ALT]+[F5]
@@ -63,6 +57,7 @@ In order to enhance the the migration tool or fix a bug that you may encounter h
 - In your console window you should see _"Help for: scm migrate-to-git"_
 - Open the launch-config and edit the command in arguments/program arguments
 
+In case you use RTC Version 6+ (and have the error Problem running 'help', unknown Subcommand...), please follow the instructions of this https://github.com/rtcTo/rtc2gitcli/issues/44#issuecomment-396727582[issue-comment] in order to run rtc2gitcli.
 
 == Wiki
 For more details {rtc2gitcliwiki}[visit our wiki]
