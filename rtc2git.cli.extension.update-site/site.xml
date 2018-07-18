@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description name="rtc2gitcli plugin update site">
+      rtc2gitcli plugin update site
+   </description>
+   <feature url="features/cli.extension.feature_1.0.1.v6_0_1.jar" id="cli.extension.feature" version="1.0.1.v6_0_1">
+      <category name="rtc2gitcli"/>
+   </feature>
+   <category-def name="rtc2gitcli" label="rtc2gitcli"/>
+</site>
