@@ -314,16 +314,18 @@ public final class GitMigrator implements Migrator {
 					String gitignoreFile = matcher.group(1).concat(".gitignore");
 					if (jazzIgnore.exists()) {
 						// change/add case
-						List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
-						Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
-						additionalNames.add(gitignoreFile);
+						if (!".gitignore".equals(gitignoreFile)) {
+							List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
+							Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
+							additionalNames.add(gitignoreFile);
+						}
 					} else {
 						// delete case except for root git ignore file
-						if(!".gitignore".equals(gitignoreFile)){
+						if (!".gitignore".equals(gitignoreFile)) {
 							new File(rootDir, gitignoreFile).delete();
 							additionalNames.add(gitignoreFile);
 						}
-					}					
+					}
 				}
 			}
 			// add additional modified name
