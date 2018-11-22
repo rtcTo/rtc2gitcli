@@ -212,6 +212,7 @@ public final class GitMigrator implements Migrator {
 
 	private void gitCommit(PersonIdent ident, String comment) {
 		try {
+			initRootGitignore(rootDir);
 			// add all untracked files
 			Status status = git.status().call();
 
