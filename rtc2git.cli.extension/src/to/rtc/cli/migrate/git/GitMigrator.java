@@ -315,11 +315,14 @@ public final class GitMigrator implements Migrator {
 						// change/add case
 						List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
 						Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
+						additionalNames.add(gitignoreFile);
 					} else {
-						// delete case
-						new File(rootDir, gitignoreFile).delete();
-					}
-					additionalNames.add(gitignoreFile);
+						// delete case except for root git ignore file
+						if(!".gitignore".equals(gitignoreFile)){
+							new File(rootDir, gitignoreFile).delete();
+							additionalNames.add(gitignoreFile);
+						}
+					}					
 				}
 			}
 			// add additional modified name
