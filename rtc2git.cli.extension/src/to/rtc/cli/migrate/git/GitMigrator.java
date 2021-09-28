@@ -212,6 +212,7 @@ public final class GitMigrator implements Migrator {
 
 	private void gitCommit(PersonIdent ident, String comment) {
 		try {
+			initRootGitignore(rootDir);
 			// add all untracked files
 			Status status = git.status().call();
 
@@ -313,13 +314,18 @@ public final class GitMigrator implements Migrator {
 					String gitignoreFile = matcher.group(1).concat(".gitignore");
 					if (jazzIgnore.exists()) {
 						// change/add case
-						List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
-						Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
+						if (!".gitignore".equals(gitignoreFile)) {
+							List<String> ignoreContent = JazzignoreTranslator.toGitignore(jazzIgnore);
+							Files.writeLines(new File(rootDir, gitignoreFile), ignoreContent, getCharset(), false);
+							additionalNames.add(gitignoreFile);
+						}
 					} else {
-						// delete case
-						new File(rootDir, gitignoreFile).delete();
+						// delete case except for root git ignore file
+						if (!".gitignore".equals(gitignoreFile)) {
+							new File(rootDir, gitignoreFile).delete();
+							additionalNames.add(gitignoreFile);
+						}
 					}
-					additionalNames.add(gitignoreFile);
 				}
 			}
 			// add additional modified name
