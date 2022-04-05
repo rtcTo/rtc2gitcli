@@ -54,6 +54,6 @@ public class LoggingPrintStream extends PrintStream {
 	}
 
 	private byte[] getDateTime() {
-		return String.format("[%1$tY-%1$tm-%1$td %1$tT] ", new Date()).getBytes();
+		return String.format("[%1$tF %1$tT.%1$tL] ", new Date()).getBytes();
 	}
 }

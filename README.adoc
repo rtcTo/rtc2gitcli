@@ -1,22 +1,31 @@
 = Tool to migrate from IBM RTC to Git
 :project-full-path: rtcTo/rtc2gitcli
 :github-branch: master
-:rtcversion: 6.0.4
+:rtcversion: 6.0.6
 :rtc2gitwiki: https://github.com/rtcTo/rtc2git/wiki
 :rtc2gitcliwiki: https://github.com/rtcTo/rtc2gitcli/wiki
 image:https://img.shields.io/badge/license-MIT-blue.svg["MIT License", link="https://github.com/{project-full-path}/blob/{github-branch}/LICENSE"]
 image:https://img.shields.io/badge/Java-8-blue.svg["Supported Versions", link="https://travis-ci.org/{project-full-path}"]
 
-A tool made for migrating code from an existing https://jazz.net/products/rational-team-concert/[IBM RTC] into a Git repository.
-Inspired by https://github.com/{project-full-path}[rtc2git], but written in Java and hopefully faster. It is implemented as `scm cli` plugin.
+A tool made for migrating code from an existing https://jazz.net/products/rational-team-concert/[IBM RTC] stream into a Git repository.
+Inspired by https://github.com/rtcTo/rtc2gitcli[rtc2git], but written in Java and (hopefully) faster. It is implemented as `scm cli` plugin.
+
+Note: This is a fork from the https://github.com/rtcTo/rtc2gitcli[public code].
+The intent behind this fork is to make it easier to create Jenkins builds to incrementally migrate from RTC to git on a large scale.
 
 
 == Prerequirements
-- *https://jazz.net/downloads/rational-team-concert/releases/{rtcversion}?p=allDownloads[SCM Tools]* from IBM. To avoid an
+- *https://jazz.net/downloads/rational-team-concert/releases/{rtcversion}?p=allDownloads[SCM Tools]* from Rational. To avoid an
   account creation on jazz.net site, you could use http://bugmenot.com/[bugmenot] (see also wiki page ({rtc2gitwiki}/configure-RTC-CLI[configure RTC CLI])
-- Eclipse configured with scm tools as target platform (see wiki {rtc2gitcliwiki}/configure-target-platform[configure scm tools target platform])
+- To build: bash, maven
+- To develop: Eclipse configured with scm tools as target platform (see wiki {rtc2gitcliwiki}/configure-target-platform[configure scm tools target platform])
 
-== Usage
+== (New) Usage
+- Run ./build.sh with an argument telling it where to find the RTC scmTools (zip or folder).  That'll build a new CLI in ./rtcScmTools.
+- Run migrateFromRTCtoGit.sh with arguments telling it how to access git & rtc, where to read from and where to write to.
+
+
+== (Old) Manual Usage
 - create an source RTC workspace with flow target and components as wanted -> `SOURCE_WORKSPACE`
 - create an target RTC workspace with `SOURCE_WORKPSACE` as flow target -> `TARGET_WORKSPACE`
 - check comments at {rtc2gitcliwiki}/configure-rtc-workspaces[configure rtc workspaces]
@@ -63,7 +72,7 @@ In case you use RTC Version 6+ (and have the error Problem running 'help', unkno
 For more details {rtc2gitcliwiki}[visit our wiki]
 
 == Links for JGit
-- http://download.eclipse.org/jgit/docs/jgit-3.3.0.201403021825-r/apidocs/?d[api docs]
+- https://javadoc.io/doc/org.eclipse.jgit/org.eclipse.jgit/5.13.0.202109080827-r/index.html[api docs]
 - https://github.com/centic9/jgit-cookbook[jgit cookbook]
 - http://wiki.eclipse.org/JGit/User_Guide[User Guide]
 
