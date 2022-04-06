@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # Script to build a docker image that is a Jenkins agent containing the rtc2git migration code.
+# The docker container can be used outside of Jenkins, but it's primarily intended
+# as a Jenkins agent.
 #
 # Requires various variables to be set in addition to the arguments below:
 #   $1 = Name of this docker image, e.g. foobar:mybranch-123 or foobar:123
@@ -13,26 +15,36 @@ set -eu
 # Download the internal certificate CA(s) that we need our image to "trust" so that it can
 # connect to our Jenkins servers.
 downloadCertificatesThatOurJvmMustTrust() {
-  mkdir -p TrustedCertificates
-  (
-  cd TrustedCertificates
-  for URL in \
-      'https://i2group.jfrog.io/artifactory/i2eng-generic-local/certs/ibm-internal/ca/intermediate/caintermediatecert.der' \
-      'https://i2group.jfrog.io/artifactory/i2eng-generic-local/certs/ibm-internal/ca/root/carootcert.der' \
-  ;do
-    local filename=`basename "${URL}"`
-    if [ -f "${filename}" ]
-    then
-      echo "Have already downloaded ${URL}"
-    else
-      echo "Downloading ${URL}..."
-      curl -H "X-JFrog-Art-Api:${ARTIFACTORY_PASSWORD}" -O "${URL}" || exit 1
-      echo "...Done."
-    fi
-  done
-  chmod 0444 *
-  ls -al
-  )
+  # If your working environment uses self-signed CAs then you'll want your
+  # docker container's JVM to "trust" your CAs.
+  # e.g. if your RTC server has CA that isn't trusted by default, or your
+  # Jenkins server etc.
+  # So, if that's the case, you'll need to uncomment the code below
+  # and make it download the certificates into the TrustedCertificates folder.
+  #
+  # Any certs placed in the TrustedCertificates folder will end up in the trust
+  # store of the docker container's JVM.
+
+  #mkdir -p TrustedCertificates
+  #(
+  #cd TrustedCertificates
+  #for URL in \
+  #    'https://my.internal.server/some-internal-path/caintermediatecert.der' \
+  #    'https://my.internal.server/some-internal-path/carootcert.der' \
+  #;do
+  #  local filename=`basename "${URL}"`
+  #  if [ -f "${filename}" ]
+  #  then
+  #    echo "Have already downloaded ${URL}"
+  #  else
+  #    echo "Downloading ${URL}..."
+  #    curl -H "X-JFrog-Art-Api:${ARTIFACTORY_PASSWORD}" -O "${URL}" || exit 1
+  #    echo "...Done."
+  #  fi
+  #done
+  #chmod 0444 *
+  #ls -al
+  #)
 }
 
 
@@ -106,8 +118,11 @@ createContentsTarFile() {
   #
   # Include any extra CA certificates we're going to need our JVM to trust
   # in order to connect to our Jenkins instance.
-  mkdir -p "root/jvmExtraCerts"
-  tar -cf - -C "TrustedCertificates" . | tar -xf - -C "root/jvmExtraCerts"
+  if [ -d "TrustedCertificates" ]
+  then
+    mkdir -p "root/jvmExtraCerts"
+    tar -cf - -C "TrustedCertificates" . | tar -xf - -C "root/jvmExtraCerts"
+  fi
   #
   # ensure that none of it is globally writable
   chmod -R o-w root
@@ -281,18 +296,21 @@ RUN /bin/bash -c '\\
       exit 1;\\
     fi;\\
     CERTFILE="\${WHERECERTS}/cacerts";\\
-    cd /jvmExtraCerts \\
-    && for CACERT in * \\
-    ; do \\
-      echo "Telling Java to trust certificate \${CACERT}" \\
-      && keytool \\
-            -importcert \\
-            -noprompt \\
-            -alias "\${CACERT}" \\
-            -file "\${CACERT}" \\
-            -keystore "\${CERTFILE}" \\
-            -storepass changeit; \\
-    done'
+    if [ -d /jvmExtraCerts ];\\
+    then \\
+      cd /jvmExtraCerts \\
+      && for CACERT in * \\
+      ; do \\
+        echo "Telling Java to trust certificate \${CACERT}" \\
+        && keytool \\
+              -importcert \\
+              -noprompt \\
+              -alias "\${CACERT}" \\
+              -file "\${CACERT}" \\
+              -keystore "\${CERTFILE}" \\
+              -storepass changeit; \\
+      done; \\
+    fi'
 
 LABEL Description="${ImageDescription}"
 ENV DOCKER_IMAGE_DESCRIPTION "${ImageDescription}"
@@ -323,7 +341,7 @@ if [ -n "${BUILD_URL:-}" ]
 then
   ImageDescription="${ImageDescription} Built by ${BUILD_URL}."
 fi
-ImageDescription="${ImageDescription} For i2-internal use only."
+ImageDescription="${ImageDescription} For internal use only."
 
 echo "Ensure we have the certificates that our JVM must trust"
 downloadCertificatesThatOurJvmMustTrust
