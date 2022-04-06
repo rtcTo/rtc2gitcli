@@ -324,7 +324,7 @@ gitReadRemoteRepositry() {
       # encounter but it didn't help, so other posts suggested 500meg so we'll try 1gig.
       git config http.postBuffer 1073741824
       # As the error is coming from HTTP/2 and there's talk that this can be caused by faulty
-      # network proxies, and we're doing this from an IBM network where trying-to-be-clever-but-
+      # network proxies, and we're doing this from a work network where trying-to-be-clever-but-
       # failing network devices are all too common (and never found to be at fault, even when
       # they're at fault), this might do the trick too.
       git config http.version HTTP/1.1
@@ -332,6 +332,11 @@ gitReadRemoteRepositry() {
       # and now it says:
       # error: RPC failed; curl 18 transfer closed with outstanding read data remaining
       # Other posts suggest that the answer is to switch to using SSH instead of HTTP.
+      #
+      # It's most likely that the answer is to use git-lfs to keep the non-lfs
+      # data size to a minimum, and then these problems seem to disappear.
+      # Certainly, after fixing a myriad of issues with our use of git-lfs, these network
+      # errors seem to have gone away...
     )
   else
     return 1
