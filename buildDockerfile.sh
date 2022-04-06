@@ -272,7 +272,7 @@ ENDTEXT
   cat <<ENDTEXT
 
 # Add things to PATH
-ENV PATH \${Jenkins_Build_Scripts_HOME}:\${RTC_ToGitMigation_SCM_HOME}:\${PATH}
+ENV PATH \${RTC_ToGitMigation_SCM_HOME}:\${PATH}
 
 # copy in everything
 ADD contents.tar /

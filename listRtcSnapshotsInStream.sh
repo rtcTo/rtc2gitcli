@@ -10,6 +10,7 @@ set -e
 set -o pipefail
 
 SCRIPT_NAME=`basename ${0}`
+SCRIPT_DIR=`dirname ${0}`
 
 # Outputs CLI usage help text to stdout.
 doHelp() {
@@ -458,7 +459,7 @@ fi
 # Pull in our RTC utility functions
 # These need various RTC_... variables to be set, which is why we delay until now.
 export RTC_EXE_NAME=lscm
-. "${Jenkins_Build_Scripts_HOME}/setRtcVariables.sh" >/dev/null || . "${Jenkins_Build_Scripts_HOME}/setRtcVariables.sh" || (echo "Something went wrong in ${Jenkins_Build_Scripts_HOME}/setRtcVariables.sh" >&2 ; exit 1)
+. "${SCRIPT_DIR}/setRtcVariables.sh" >/dev/null || . "${SCRIPT_DIR}/setRtcVariables.sh" || (echo "Something went wrong in ${SCRIPT_DIR}/setRtcVariables.sh" >&2 ; exit 1)
 # Ensure that any sub-commands we run use the exact same uniqueness, otherwise we can end up using a different config area, different logs etc.
 export RTCCMDS_UNIQUE_NAME
 
