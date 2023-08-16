@@ -10,7 +10,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -58,7 +57,7 @@ public class Files {
 	 * 
 	 * @param file
 	 *            the file being written/appended
-	 * @param toGlobalIgnore
+	 * @param linesToWrite
 	 *            the lines to be written without any line separators
 	 * @param cs
 	 *            the character set used for writing
@@ -67,18 +66,20 @@ public class Files {
 	 * @throws IOException
 	 *             if the write operation fails
 	 */
-	public static void writeLines(File file, Collection<String> toGlobalIgnore, Charset cs, boolean append)
+	public static void writeLines(File file, Iterable<String> linesToWrite, Charset cs, boolean append)
 			throws IOException {
 		FileOutputStream out = new FileOutputStream(file, append);
 		try {
 			PrintWriter pw = new PrintWriter(new OutputStreamWriter(out, cs));
 			try {
-				for (String line : toGlobalIgnore) {
+				for (String line : linesToWrite) {
 					pw.append(line).println();
 				}
+				pw.flush();
 			} finally {
 				pw.close();
 			}
+			out.flush();
 		} finally {
 			out.close();
 		}
@@ -104,5 +105,21 @@ public class Files {
 		} else {
 			file.delete();
 		}
+	}
+
+	/**
+	 * Returns a git relative path given a git repo base folder and a File resource.
+	 * 
+	 * @param baseDir The folder to call home
+	 * @param file    The file (or folder) we need to locate relative to baseDir.
+	 * @return A string path that always uses forward slashes as a directory
+	 *         separator even if we're running on Windows.
+	 */
+	public static String relativePath(File baseDir, File file) {
+	    String relativePath = baseDir.toPath().relativize(file.toPath()).toString();
+	    if ( File.separatorChar!='/' ) {
+	        relativePath = relativePath.replace(File.separatorChar, '/');
+	    }
+	    return relativePath;
 	}
 }

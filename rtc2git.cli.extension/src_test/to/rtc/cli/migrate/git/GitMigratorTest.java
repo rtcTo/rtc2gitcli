@@ -1,38 +1,25 @@
 package to.rtc.cli.migrate.git;
 
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.StoredConfig;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.WindowCacheConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
-import to.rtc.cli.migrate.ChangeSet;
 import to.rtc.cli.migrate.ChangeSet.WorkItem;
-import to.rtc.cli.migrate.Tag;
 import to.rtc.cli.migrate.util.Files;
 
 /**
@@ -40,69 +27,44 @@ import to.rtc.cli.migrate.util.Files;
  *
  * @author patrick.reinhart
  */
-public class GitMigratorTest {
-	@Rule
-	public TemporaryFolder tempFolder = new TemporaryFolder();
-
-	private Charset cs;
-	private GitMigrator migrator;
-	private Git git;
-	private Properties props;
-	private File basedir;
-
-	@Before
-	public void setUo() {
-		cs = Charset.forName("UTF-8");
-		props = new Properties();
-		migrator = new GitMigrator(props);
-		basedir = tempFolder.getRoot();
-	}
-
-	@After
-	public void tearDown() {
-		migrator.close();
-		if (git != null) {
-			git.close();
-		}
-	}
-
-	@Test
-	public void testClose() {
-		migrator.close();
-	}
+public class GitMigratorTest extends GitMigratorTestBase {
 
 	@Test
 	public void testInit_noGitRepoAvailableNoGitIgnore() throws Exception {
 		props.setProperty("user.email", "john.doe@somewhere.com");
 		props.setProperty("user.name", "John Doe");
+		props.setProperty("git.allow.empty.commits", "true");
 
 		assertFalse(new File(basedir, ".gitattributes").exists());
 
 		migrator.initialize(props);
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		checkGit("John Doe", "john.doe@somewhere.com", "Initial commit");
-		checkExactLines(new File(basedir, ".gitignore"), GitMigrator.ROOT_IGNORED_ENTRIES);
+		assertFalse(new File(basedir, ".gitignore").exists());
 		assertFalse(new File(basedir, ".gitattributes").exists());
+		checkExactLines(new File(basedir, ".git/info/exclude"), GitMigrator.ROOT_ALWAYS_IGNORED_ENTRIES);
 	}
 
 	@Test
 	public void testInit_noGitRepoAvailableWithGitIgnore() throws Exception {
-		Files.writeLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/", "/.jazzShed"), cs, false);
+		Files.writeLines(new File(basedir, ".gitignore"), Arrays.asList("willBeOverwritten", "andIgnored"), cs, false);
 		props.setProperty("global.gitignore.entries", "/projectX/WebContent/node_modules; *.ignored");
 
-		migrator.init(basedir);
+		migrator.initialize(props);
+		migrator.init(basedir, false);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
-		checkExactLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/bin/", "/.jazzShed", "/.metadata",
+		checkGit(GitMigrator.DEFAULT_INITIAL_COMMIT_USERNAME, GitMigrator.DEFAULT_INITIAL_COMMIT_USEREMAIL, "Initial commit");
+		checkExactLinesIgnoringComments(new File(basedir, ".gitignore"), Arrays.asList(
 				"/projectX/WebContent/node_modules", "*.ignored"));
+		checkExactLines(new File(basedir, ".git/info/exclude"), GitMigrator.ROOT_ALWAYS_IGNORED_ENTRIES);
 	}
 
 	@Test
 	public void testInit_Gitattributes() throws IOException {
 		props.setProperty("gitattributes", "* text=auto");
 
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		File gitattributes = new File(basedir, ".gitattributes");
 		assertTrue(gitattributes.exists() && gitattributes.isFile());
@@ -113,12 +75,14 @@ public class GitMigratorTest {
 
 	@Test
 	public void testInit_GitRepoAvailable() throws Exception {
+		props.setProperty("git.allow.empty.commits", "true");
+		migrator.initialize(props);
 		git = Git.init().setDirectory(basedir).call();
 
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
-		checkGit("RTC 2 git", "rtc2git@rtc.to", "Initial commit");
-		assertEquals(GitMigrator.ROOT_IGNORED_ENTRIES, Files.readLines(new File(basedir, ".gitignore"), cs));
+		checkGit(GitMigrator.DEFAULT_INITIAL_COMMIT_USERNAME, GitMigrator.DEFAULT_INITIAL_COMMIT_USEREMAIL, "Initial commit");
+		assertEquals(GitMigrator.ROOT_ALWAYS_IGNORED_ENTRIES, Files.readLines(new File(basedir, ".git/info/exclude"), cs));
 	}
 
 	@Test
@@ -126,7 +90,7 @@ public class GitMigratorTest {
 		git = Git.init().setDirectory(basedir).call();
 		StoredConfig config = git.getRepository().getConfig();
 
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		config.load();
 		assertFalse(config.getBoolean("core", null, "ignorecase", true));
@@ -141,85 +105,140 @@ public class GitMigratorTest {
 		props.setProperty("commit.message.replacement.1", "BUG-$1 $2");
 		migrator.initialize(props);
 
-		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga", ""));
+		assertEquals("gugus BUG-1234 gaga", migrator.getCommitMessage("gugus", "B1234: gaga", "", "uri", "streamId", "changeid"));
 	}
 
 	@Test
 	public void testGetCommitMessage_withCustomFormat() {
 		props.setProperty("commit.message.format", "%1s%n%n%2s");
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		String lf = System.getProperty("line.separator");
 
-		assertEquals("gug%us" + lf + lf + "ga%ga", migrator.getCommitMessage("gug%us", "ga%ga", ""));
+		assertEquals("gug%us" + lf + lf + "ga%ga", migrator.getCommitMessage("gug%us", "ga%ga", "", "uri", "streamId", "changeid"));
 	}
 
 	@Test
 	public void testGetCommitMessage_withCustomFormat1() {
 		props.setProperty("commit.message.format", "%1s%n%n%2s%n%n%3s");
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		String lf = System.getProperty("line.separator");
 
 		assertEquals("gug%us" + lf + lf + "ga%ga" + lf + lf + "gi%gl",
-				migrator.getCommitMessage("gug%us", "ga%ga", "gi%gl"));
+				migrator.getCommitMessage("gug%us", "ga%ga", "gi%gl", "uri", "streamId", "changeid"));
 	}
 
 	@Test
 	public void testGetWorkItemNumbers_noWorkItems() {
-		assertEquals("", migrator.getWorkItemNumbers(Collections.<WorkItem> emptyList()));
+		assertEquals("", migrator.getWorkItemNumbers("MyRtcUrl", Collections.<WorkItem> emptyList()));
 	}
 
 	@Test
 	public void testGetWorkItemNumbers_singleWorkItem() {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
-		assertEquals("4711", migrator.getWorkItemNumbers(items));
+		assertEquals("4711", migrator.getWorkItemNumbers("MyRtcUrl", items));
 	}
 
 	@Test
 	public void testGetWorkItemNumbers_singleWorkItem_customFormat() {
 		props.setProperty("rtc.workitem.number.format", "RTC-%s");
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
-		assertEquals("RTC-4711", migrator.getWorkItemNumbers(items));
+		assertEquals("RTC-4711", migrator.getWorkItemNumbers("MyRtcUrl", items));
 	}
 
 	@Test
 	public void testGetWorkItemNumbers_multipleWorkItems() {
 		props.setProperty("rtc.workitem.number.format", "RTC-%s");
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		List<WorkItem> items = new ArrayList<WorkItem>();
 		items.add(TestWorkItem.INSTANCE1);
 		items.add(TestWorkItem.INSTANCE2);
-		assertEquals("RTC-4711 RTC-4712", migrator.getWorkItemNumbers(items));
+		assertEquals("RTC-4711 RTC-4712", migrator.getWorkItemNumbers("MyRtcUrl", items));
+	}
+
+	@Test
+	public void testGetWorkItemNumbers_multipleWorkItemsWithPrefixAndSuffix() {
+		props.setProperty("rtc.workitem.number.prefix", "[RTC-");
+		props.setProperty("rtc.workitem.number.format", "%1$s");
+		props.setProperty("rtc.workitem.number.delimiter", ",");
+		props.setProperty("rtc.workitem.number.suffix", "]: ");
+		migrator.init(basedir, false);
+
+		List<WorkItem> items = new ArrayList<WorkItem>();
+		items.add(TestWorkItem.INSTANCE1);
+		items.add(TestWorkItem.INSTANCE2);
+		assertEquals("[RTC-4711,4712]: ", migrator.getWorkItemNumbers("MyRtcUrl", items));
+	}
+
+	@Test
+	public void testGetWorkItemTexts_noWorkItems() {
+		props.setProperty("rtc.workitem.text.prefix", "foo");
+		migrator.init(basedir, false);
+		final String expected = "";
+
+		List<WorkItem> items = new ArrayList<WorkItem>();
+		final String actual = migrator.getWorkItemTexts("https://myRtcServer/ccm/", items);
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void testGetWorkItemTexts_workItemWithPrefixAndSuffix() {
+		props.setProperty("rtc.workitem.text.prefix", "%n%n");
+		props.setProperty("rtc.workitem.text.format", "%3$sweb#action=com.ibm.team.workitem.viewWorkItem&id=%1$s%n%2$s");
+		props.setProperty("rtc.workitem.text.delimiter", "%n%n");
+		props.setProperty("rtc.workitem.text.suffix", "");
+		migrator.init(basedir, false);
+		final String eol = System.getProperty("line.separator");
+		final String expected = eol + eol + "https://myRtcServer/ccm/web#action=com.ibm.team.workitem.viewWorkItem&id=4711"+eol+"The one and only";
+
+		List<WorkItem> items = new ArrayList<WorkItem>();
+		items.add(TestWorkItem.INSTANCE1);
+		final String actual = migrator.getWorkItemTexts("https://myRtcServer/ccm/", items);
+		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void testGetWorkItemTexts_workItems() {
+		migrator.init(basedir, false);
+		final String eol = System.getProperty("line.separator");
+		final String expected = TestWorkItem.INSTANCE1.getNumber() + " " + TestWorkItem.INSTANCE1.getText() + eol
+				+ TestWorkItem.INSTANCE2.getNumber() + " " + TestWorkItem.INSTANCE2.getText();
+
+		List<WorkItem> items = new ArrayList<WorkItem>();
+		items.add(TestWorkItem.INSTANCE1);
+		items.add(TestWorkItem.INSTANCE2);
+		final String actual = migrator.getWorkItemTexts("https://myRtcServer/ccm/", items);
+		assertEquals(expected, actual);
 	}
 
 	@Test
 	public void testCommitChanges() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		File testFile = new File(basedir, "somefile");
 		Files.writeLines(testFile, Collections.singletonList("somevalue"), cs, false);
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
+		checkGit(TestChangeSet.INSTANCE.getCreatorName(), TestChangeSet.INSTANCE.getEmailAddress(), TestWorkItem.INSTANCE1.getNumber()+" "+TestChangeSet.INSTANCE.getComment());
 		checkExactLines(testFile, Collections.singletonList("somevalue"));
 	}
 
 	@Test
 	public void testCommitChanges_noWorkItem() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		File testFile = new File(basedir, "somefile");
 		Files.writeLines(testFile, Collections.singletonList("somevalue"), cs, false);
 
 		migrator.commitChanges(TestChangeSet.NO_WORKITEM_INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "the checkin comment");
+		checkGit(TestChangeSet.NO_WORKITEM_INSTANCE.getCreatorName(), TestChangeSet.NO_WORKITEM_INSTANCE.getEmailAddress(), TestChangeSet.NO_WORKITEM_INSTANCE.getComment());
 		checkExactLines(testFile, Collections.singletonList("somevalue"));
 	}
 
@@ -269,21 +288,317 @@ public class GitMigratorTest {
 
 	@Test
 	public void testAddUpdateGitignoreIfJazzignoreAddedOrChanged() throws Exception {
-		migrator.init(basedir);
-		File jazzignore = new File(basedir, ".jazzignore");
+		testScenario(true, "", "", ts(
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore.recursive = {*.class}"),
+						tsAssertFileContent(".gitignore", "*.class", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore = {*.suo}"),
+						tsAssertFileContent(".gitignore", "/*.suo", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore = {*.suo}", "core.ignore.recursive = {*.class}"),
+						tsAssertFileContent(".gitignore", "/*.suo", "*.class", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore = {*.foo} {*.bar}", "core.ignore.recursive = {*.class}"),
+						tsAssertFileContent(".gitignore", "/*.foo", "/*.bar", "*.class", "!/.gitignore", "!/.jazzignore"))
+						));
+	}
 
-		Files.writeLines(jazzignore, Arrays.asList("core.ignore = {*.suo}", "core.ignore.recursive = {*.class}"), cs,
-				false);
+	@Test
+	public void testRootGitIgnoreIsAbsentIfNotNeeded() throws Exception {
+		testScenario(true, "", "", ts(
+				tsInit(tsAssertFileAbsentAndNotInGit(".gitignore"))));
+	}
 
-		migrator.commitChanges(TestChangeSet.INSTANCE);
+	@Test
+	public void testRootGitIgnoreIsIgnoredIfWeSaySo() throws Exception {
+		testScenario(false, "", "", ts(
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore = {*.foo}\ncore.ignore.recursive = {*.bar}"),
+						tsAssertFileContent(".gitignore", "/*.foo", "*.bar", "!/.gitignore", "!/.jazzignore"),
+						tsMkCommittedFile("someFile"), tsMkCommittedFile("someFolder/anotherFile"),
+						tsMkCommittedFile("jazzignored.foo"), tsMkCommittedFile("someFolder/jazzignored.bar"))));
+	}
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
-		checkExactLines(new File(basedir, ".gitignore"), Arrays.asList("/*.suo", "*.class"));
+	@Test
+	public void testRootGitIgnoreIsDeletedOnceNotNeeded() throws Exception {
+		testScenario(true, "", "", ts(
+				tsInit(tsAssertFileAbsentAndNotInGit(".gitignore")),
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore.recursive = {*.bar}"),
+						tsAssertFileContent(".gitignore", "*.bar", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsDeleteFile(".jazzignore"),
+						tsAssertFileDeletedFromGit(".gitignore"))));
+	}
+
+	@Test
+	public void testSubfolderGitIgnoreDoesNotIncludeRootEntriesButStillIgnoresWhatItSaysItShould() throws Exception {
+		testScenario(true, "", ".zip", ts(
+				tsCs1(tsMkCommittedFile("subdir/.jazzignore", "core.ignore = {*.bar}"),
+						tsMkCommittedFile("subdir/shouldBeCommitted.txt"),
+						tsMkIgnoredFile("subdir/shouldBeIgnoredByGlobalConfigRule.zip"),
+						tsMkIgnoredFile("subdir/shouldBeIgnored.bar"),
+						tsAssertFileContent("subdir/.gitignore", "/*.bar", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testSubfolderGitIgnoreDoesNotIncludeRootEntriesButIsIgnoredIfWeDontTrustIt() throws Exception {
+		testScenario(false, "", ".zip", ts(
+				tsCs1(tsMkCommittedFile("subdir/.jazzignore", "core.ignore = {*.bar}"),
+						tsMkCommittedFile("subdir/shouldBeCommitted.txt"),
+						tsMkIgnoredFile("subdir/shouldBeIgnoredByGlobalConfigRule.zip"),
+						tsMkCommittedFile("subdir/wouldBeIgnoredIfWeTrustedJazzignoresButWeDont.bar"),
+						tsAssertFileContent("subdir/.gitignore", "/*.bar", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testJazzIgnoreCanIgnoreManyThings() throws Exception {
+		testScenario(true, "", "",
+				ts(tsCs1(
+						tsMkCommittedFile(".jazzignore", "core.ignore = {*.foo}\ncore.ignore.recursive = {bin} {ignored} {*.txt}"),
+						tsMkIgnoredFile("shouldBeIgnoredByRecursiveTxtRule.txt"),
+						tsMkIgnoredFile("bin/shouldBeIgnoredByRecursiveBinRule.text"),
+						tsMkIgnoredFile("notignored/bin/shouldBeIgnoredByRecursiveBinRule.text"),
+						tsMkIgnoredFile("notignored/ignored/shouldBeIgnoredByRecursiveIgnoreRule.text"),
+						tsAssertFileContent(".gitignore", "/*.foo", "bin", "ignored", "*.txt", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testGitIgnoreIsIgnoredIfWeDontTrustItEvenInDeeplyNestedFolder() throws Exception {
+		testScenario(false, "", "",
+				ts(tsCs1(
+						tsMkCommittedFile(".jazzignore", "core.ignore = {*.foo}\ncore.ignore.recursive = {bin} {ignored} {*.txt}"),
+						tsAssertFileContent(".gitignore", "/*.foo", "bin", "ignored", "*.txt", "!/.gitignore", "!/.jazzignore")),
+					tsCs1(tsMkCommittedFile("bin/foo/ignored/wouldBeIgnoredByRecursiveRuleDueToPathAndName.txt"),
+						tsMkCommittedFile("wouldBeIgnoredByRecursiveRuleDueToFileExtenstion.txt"),
+						tsAssertFileContentNotInGit(".gitignore", "/*.foo", "bin", "ignored", "*.txt", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testGitIgnoreIsIgnoredIfWeDontTrustItEvenWhenIgnoredForMultipleReasons() throws Exception {
+		// This is a real-world failure scenario
+		// .jazzignore set to ignore loads of things recursively, including bin & Release
+		// a new file dev/utilities/TranslationFileGenerator/bin/Release/TranslationFileGenerator.vshost.exe was added
+		// git ignored it despite code that should've fixed that.
+		final List<String> ji = new ArrayList<String>();
+		ji.add("### Jazz Ignore 0");
+		ji.add("# Ignored files and folders will not be committed, but may be modified during ");
+		ji.add("# accept or update.  ");
+		ji.add("# - Ignore properties should contain a space separated list of filename patterns.  ");
+		ji.add("# - Each pattern is case sensitive and surrounded by braces ('{' and '}').  ");
+		ji.add("# - \"*\" matches zero or more characters.  ");
+		ji.add("# - \"?\" matches a single character.  ");
+		ji.add("# - The pattern list may be split across lines by ending the line with a ");
+		ji.add("#     backslash and starting the next line with a tab.  ");
+		ji.add("# - Patterns in core.ignore prevent matching resources in the same ");
+		ji.add("#     directory from being committed.  ");
+		ji.add("# - Patterns in core.ignore.recursive matching resources in the current ");
+		ji.add("#     directory and all subdirectories from being committed.  ");
+		ji.add("# - The default value of core.ignore.recursive is *.class ");
+		ji.add("# - The default value for core.ignore is bin ");
+		ji.add("# ");
+		ji.add("# To ignore shell scripts and hidden files in this subtree: ");
+		ji.add("#     e.g: core.ignore.recursive = {*.sh} {\\.*} ");
+		ji.add("# ");
+		ji.add("# To ignore resources named 'bin' in the current directory (but allow ");
+		ji.add("#  them in any sub directorybelow): ");
+		ji.add("#     e.g: core.ignore.recursive = {*.sh} {\\.*} ");
+		ji.add("# ");
+		ji.add("# NOTE: modifying ignore files will not change the ignore status of ");
+		ji.add("#     Eclipse derived resources.");
+		ji.add("");
+		ji.add("core.ignore.recursive= \\");
+		ji.add(" {*.ncb} \\");
+		ji.add(" {*.suo} \\");
+		ji.add(" {*.sdf} \\");
+		ji.add(" {*.pdb} \\");
+		ji.add(" {*.tlh} \\");
+		ji.add(" {*.tlb} \\");
+		ji.add(" {*_i.c} \\");
+		ji.add(" {*_p.c} \\");
+		ji.add(" {*_h.h} \\");
+		ji.add(" {*.i} \\");
+		ji.add(" {*.pch} \\");
+		ji.add(" {*.tli} \\");
+		ji.add(" {*.htm} \\");
+		ji.add(" {*.idb} \\");
+		ji.add(" {*.dll} \\");
+		ji.add(" {*.cache} \\");
+		ji.add(" {*.user} \\");
+		ji.add("    {*.chm} \\");
+		ji.add(" {*.embed.manifest} \\");
+		ji.add(" {*.intermediate.manifest} \\");
+		ji.add(" {*.embed.manifest.res} \\");
+		ji.add(" {*.res} \\");
+		ji.add(" {*.dep } \\");
+		ji.add(" {*.opensdf } \\");
+		ji.add(" {Debug} \\");
+		ji.add(" {Release} \\");
+		ji.add(" {ReadOnlyDebug} \\");
+		ji.add(" {ReadOnlyRelease} \\");
+		ji.add(" {obj} \\");
+		ji.add(" {bin} \\");
+		ji.add(" {*FileListAbsolute.txt} \\");
+		ji.add(" {libraries} \\");
+		ji.add(" {tests} \\");
+		ji.add(" {ipch} \\");
+		ji.add(" {My Project} \\");
+		ji.add("        {*.ipch}");
+		ji.add("core.ignore= ");
+		final List<String> gi = new ArrayList<String>();
+		gi.add("# Generated from .jazzignore file");
+		gi.add("#   ");
+		gi.add("#   core.ignore.recursive= \\{*.ncb} \\{*.suo} \\{*.sdf} \\{*.pdb} \\{*.tlh} \\{*.tlb} \\{*_i.c} \\{*_p.c} \\{*_h.h} \\{*.i} \\{*.pch} \\{*.tli} \\{*.htm} \\{*.idb} \\{*.dll} \\{*.cache} \\{*.user} \\{*.chm} \\{*.embed.manifest} \\{*.intermediate.manifest} \\{*.embed.manifest.res} \\{*.res} \\{*.dep } \\{*.opensdf } \\{Debug} \\{Release} \\{ReadOnlyDebug} \\{ReadOnlyRelease} \\{obj} \\{bin} \\{*FileListAbsolute.txt} \\{libraries} \\{tests} \\{ipch} \\{My Project} \\{*.ipch}");
+		gi.add("*.ncb");
+		gi.add("*.suo");
+		gi.add("*.sdf");
+		gi.add("*.pdb");
+		gi.add("*.tlh");
+		gi.add("*.tlb");
+		gi.add("*_i.c");
+		gi.add("*_p.c");
+		gi.add("*_h.h");
+		gi.add("*.i");
+		gi.add("*.pch");
+		gi.add("*.tli");
+		gi.add("*.htm");
+		gi.add("*.idb");
+		gi.add("*.dll");
+		gi.add("*.cache");
+		gi.add("*.user");
+		gi.add("*.chm");
+		gi.add("*.embed.manifest");
+		gi.add("*.intermediate.manifest");
+		gi.add("*.embed.manifest.res");
+		gi.add("*.res");
+		gi.add("*.dep ");
+		gi.add("*.opensdf ");
+		gi.add("Debug");
+		gi.add("Release");
+		gi.add("ReadOnlyDebug");
+		gi.add("ReadOnlyRelease");
+		gi.add("obj");
+		gi.add("bin");
+		gi.add("*FileListAbsolute.txt");
+		gi.add("libraries");
+		gi.add("tests");
+		gi.add("ipch");
+		gi.add("My Project");
+		gi.add("*.ipch");
+		gi.add("#   core.ignore=");
+		gi.add("!/.gitignore");
+		gi.add("!/.jazzignore");
+		testScenario(false, "", "", ts(
+				tsCs1(tsMkCommittedFile("dev/.jazzignore", ji.toArray(new String[0])),
+					  tsAssertFileContent("dev/.gitignore", gi.toArray(new String[0]))),
+				tsCs1(tsMkCommittedFile("dev/utilities/TranslationFileGenerator/bin/Release/TranslationFileGenerator.exe","OriginalContent"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/Input/IgnoreExceptions.txt","OriginalContent"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/TranslationFileGenerator.cs","OriginalContent")),
+				tsCs1(tsMkCommittedFile("dev/utilities/TranslationFileGenerator/bin/Release/TranslationFileGenerator.exe","ModifiedContent"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/bin/Release/TranslationFileGenerator.vshost.exe"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/bin/Release/TranslationFileGenerator.vshost.exe.manifest"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/Input/IgnoreExceptions.txt","ModifiedContent"),
+					  tsMkCommittedFile("dev/utilities/TranslationFileGenerator/TranslationFileGenerator.cs","ModifiedContent"))));
+	}
+
+	@Test
+	public void testTrustedJazzignoreThatIgnoresEverythingDoesNotIgnoreGitignore() throws Exception {
+		testScenario(true, "", "", ts(
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore.recursive = {*}"),
+						tsAssertFileContent(".gitignore", "*", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testUntrustedJazzignoreThatIgnoresEverythingDoesNotIgnoreGitignore() throws Exception {
+		testScenario(false, "", "", ts(
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore.recursive = {*}"),
+						tsAssertFileContent(".gitignore", "*", "!/.gitignore", "!/.jazzignore"))));
+	}
+
+	@Test
+	public void testRootGitIgnoreContainsJazzignoreContentsAndGlobalGitIgnoreEntries() throws Exception {
+		testScenario(true, "*.ignored; /ignoreDir", ".zip", ts(
+				tsInit(tsAssertFileContent(".gitignore", "*.ignored", "/ignoreDir", "*.zip")),
+				tsCs1(tsMkCommittedFile(".jazzignore", "core.ignore = {*.foo}\ncore.ignore.recursive = {*.bar}"),
+						tsAssertFileContent(".gitignore", "*.ignored", "/ignoreDir", "*.zip", "/*.foo", "*.bar", "!/.gitignore", "!/.jazzignore"),
+						tsMkIgnoredFile("ignoreDir/text"), tsMkIgnoredFile("text.ignored"),
+						tsMkIgnoredFile("ignored.foo"), tsMkIgnoredFile("ignored.bar"),
+						tsMkCommittedFile("someDir/ignored.foo"), tsMkIgnoredFile("someDir/ignored.zip"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersCreatesGitIgnoreFileForFoldersWeArentIgnoring() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		testScenario(true, "", "",
+				ts(tsInit(tsMkCommittedFile(".jazzignore", "core.ignore = {ignoreDir}"),
+						tsAssertFileContent(".gitignore", "/ignoreDir", "!/.gitignore", "!/.jazzignore")),
+						tsCs1(tsMkIgnoredFolder("ignoreDir/"),
+								tsMkCommittedFolder("folderThatIsEmpty/"),
+								tsAssertFileContent("folderThatIsEmpty/.gitignore"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersCreatesGitIgnoreFileForFoldersWhenWeAreIgnoringJazzignoreSettings() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		props.setProperty("purge.gitignore.files.between.commits", "false"); // we need to see what's going on
+		testScenario(false, "", "",
+				ts(tsInit(tsMkCommittedFile(".jazzignore", "core.ignore = {ignoreDir}"),
+						tsAssertFileContent(".gitignore", "/ignoreDir", "!/.gitignore", "!/.jazzignore")),
+					tsCs1(tsMkCommittedFolder("ignoreDir/"),
+						tsMkCommittedFolder("folderThatIsEmpty/"),
+						tsAssertFileContent("ignoreDir/.gitignore"),
+						tsAssertFileContent("folderThatIsEmpty/.gitignore"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersCreatesGitIgnoreFileForFoldersWhenWeAreIgnoringJazzignoreSettingsEvenIfWeAreRemovingGitIgnoredBetweenCommits() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		props.setProperty("purge.gitignore.files.between.commits", "true");
+		testScenario(false, "", "",
+				ts(tsInit(tsMkCommittedFile(".jazzignore", "core.ignore = {ignoreDir}"),
+						tsAssertFileAbsentButIsInGit(".gitignore")),
+					tsCs1(tsMkCommittedFolder("ignoreDir/"),
+						tsMkCommittedFolder("folderThatIsEmpty/"),
+						tsAssertFileAbsentButIsInGit("ignoreDir/.gitignore"),
+						tsAssertFileAbsentButIsInGit("folderThatIsEmpty/.gitignore"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersDeletesGitIgnoreFileForRemovedFoldersWhenWeAreIgnoringJazzignoreSettingsEvenIfWeAreRemovingGitIgnoredBetweenCommits() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		props.setProperty("purge.gitignore.files.between.commits", "true");
+		testScenario(false, "", "",
+				ts(tsCs1(tsMkCommittedFolder("folderThatIsEmpty/"),
+						tsAssertFileAbsentButIsInGit("folderThatIsEmpty/.gitignore")),
+				tsCs1(tsDeleteFile("folderThatIsEmpty/"),
+						tsAssertFileAbsentButIsInGit("folderThatIsEmpty/.gitignore")),
+				tsCs1(tsMkCommittedFile("somethingElse"),
+						tsAssertFileAbsentAndNotInGit("folderThatIsEmpty/.gitignore"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersWhenTrustingJazzignoreRemovesGitIgnoreFileWhenUnnecessary() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		testScenario(true, "", "",
+				ts(tsInit(tsMkCommittedFile(".jazzignore", "core.ignore = {ignoreDir}"),
+						tsAssertFileContent(".gitignore", "/ignoreDir", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsMkIgnoredFolder("ignoreDir/"),
+						tsMkCommittedFolder("folderThatIsEmpty/"),
+						tsAssertFileContent("folderThatIsEmpty/.gitignore")),
+				tsCs1(tsMkCommittedFile("folderThatIsEmpty/somethingElse.txt"),
+						tsAssertFileDeletedFromGit("folderThatIsEmpty/.gitignore"))));
+	}
+
+	@Test
+	public void testPreserveEmptyFoldersWhenNotTrustingJazzignoreRemovesGitIgnoreFileWhenUnnecessary() throws Exception {
+		props.setProperty("preserve.empty.folders", "true");
+		testScenario(false, "", "",
+				ts(tsInit(tsMkCommittedFile(".jazzignore", "core.ignore = {ignoreDir}"),
+						tsAssertFileContent(".gitignore", "/ignoreDir", "!/.gitignore", "!/.jazzignore")),
+				tsCs1(tsMkCommittedFolder("ignoreDir/"),
+						tsMkCommittedFolder("folderThatIsEmpty/"),
+						tsAssertFileContent("folderThatIsEmpty/.gitignore")),
+				tsCs1(tsMkCommittedFile("folderThatIsEmpty/somethingElse.txt"),
+						tsAssertFileDeletedFromGit("folderThatIsEmpty/.gitignore"))));
 	}
 
 	@Test
 	public void testAddUpdateGitignoreIfJazzignoreAddedOrChangedInSubdirectory() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
 
@@ -292,13 +607,13 @@ public class GitMigratorTest {
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
-		checkExactLines(new File(subdir, ".gitignore"), Arrays.asList("/*.suo", "*.class"));
+		checkGit(TestChangeSet.INSTANCE.getCreatorName(), TestChangeSet.INSTANCE.getEmailAddress(), TestWorkItem.INSTANCE1.getNumber()+" "+TestChangeSet.INSTANCE.getComment());
+		checkExactLinesIgnoringComments(new File(subdir, ".gitignore"), Arrays.asList("/*.suo", "*.class", "!/.gitignore", "!/.jazzignore"));
 	}
 
 	@Test
 	public void testRemovedGitignoreIfJazzignoreRemoved() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		File jazzignore = new File(basedir, ".jazzignore");
 		File gitignore = new File(basedir, ".gitignore");
 
@@ -315,7 +630,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testRestoreGitignoreIfJazzignoreNotRemoved() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		File jazzignore = new File(basedir, ".jazzignore");
 		File gitignore = new File(basedir, ".gitignore");
 
@@ -332,7 +647,7 @@ public class GitMigratorTest {
 
 	@Test
 	public void testRestoreGitignoreIfJazzignoreNotRemovedInSubdirectory() throws Exception {
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 		File subdir = tempFolder.newFolder("subdir");
 		File jazzignore = new File(subdir, ".jazzignore");
 		File gitignore = new File(subdir, ".gitignore");
@@ -352,56 +667,67 @@ public class GitMigratorTest {
 	public void testGlobalIgnoredFilesAddedToRootGitIgnore() throws Exception {
 		props.setProperty("ignore.file.extensions", ".zip; .jar; .exe; .dLL");
 		migrator.initialize(props);
-		migrator.init(basedir);
+		migrator.init(basedir, false);
 
 		create(new File(basedir, "some.zip"));
 		create(new File(basedir, "subdir/some.jar"));
 		create(new File(basedir, "subdir/subsub/some.dLL"));
+		create(new File(basedir, "notIgnored"));
 
 		migrator.commitChanges(TestChangeSet.INSTANCE);
 
-		checkGit("Heiri Mueller", "heiri.mueller@irgendwo.ch", "4711 the checkin comment");
-		checkAllLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/.jazzShed", "/.metadata",
-				"/subdir/subsub/some.dLL", "/some.zip", "/subdir/some.jar"));
+		checkGit(1, GitMigrator.DEFAULT_INITIAL_COMMIT_USERNAME, GitMigrator.DEFAULT_INITIAL_COMMIT_USEREMAIL, "Initial commit");
+		checkGit(0, TestChangeSet.INSTANCE.getCreatorName(), TestChangeSet.INSTANCE.getEmailAddress(), TestWorkItem.INSTANCE1.getNumber()+" "+TestChangeSet.INSTANCE.getComment());
+		checkExactLinesIgnoringComments(new File(basedir, ".gitignore"), Arrays.asList("*.zip", "*.jar", "*.exe", "*.dLL"));
 	}
 
 	@Test
-	public void testCreateTagNameReplacesWhiteSpacesWithUnderscore() {
-		String tagname = migrator.createTagName("tag with whitespaces");
-
-		assertThat(tagname, is("tag_with_whitespaces"));
+	public void testCreateTagName() {
+		final String[][] testCases = { //
+				{ "foo]", "foo]" }, //
+				{ "This_is_actually_a_valid_tag-name!", "This_is_actually_a_valid_tag-name!" }, //
+				{ "tag/.lock", "tag__lock" }, //
+				{ "tag..dotdot", "tag__dotdot" }, //
+				{ "tag\000nul\001one\002two\rcr\nlf\ttab\bbksp\fff\177del", "tag_nul_one_two_cr_lf_tab_bksp_ff_del" }, //
+				{ "tag with whitespaces", "tag_with_whitespaces" }, //
+				{ "tag~tilde", "tag_tilde" }, //
+				{ "tag^caret", "tag_caret" }, //
+				{ "tag:colon", "tag_colon" }, //
+				{ "tag?questionmark", "tag_questionmark" }, //
+				{ "tag*asterisk", "tag_asterisk" }, //
+				{ "tag[openbracket", "tag_openbracket" }, //
+				{ "/startswithslash", "_startswithslash" }, //
+				{ "endwithslash/", "endwithslash_" }, //
+				{ "contains/slash", "contains_slash" }, //
+				{ "multiple//slashes", "multiple__slashes" }, //
+				{ "multiple///slashes", "multiple___slashes" }, //
+				{ "endwithdot.", "endwithdot_" }, //
+				{ "tag@{name", "tag@_name" }, //
+				{ "tag\\backslash", "tag_backslash" }, //
+				{ "tag1,2,3", "tag1_2_3" }, //
+		};
+		for (final String[] testCase : testCases) {
+			final String rtcName = testCase[0];
+			final String expectedTagName = testCase[1];
+			final String actualTagName = GitMigrator.createTagName(rtcName);
+			assertIsValidTag(actualTagName);
+			assertThat(actualTagName, equalTo(expectedTagName));
+		}
 	}
 
 	@Test
 	public void testCreateTag() throws Exception {
-		migrator.init(basedir);
+		props.setProperty("git.allow.empty.commits", "true");
+		migrator.initialize(props);
+		migrator.init(basedir, false);
 
 		migrator.createTag(TestTag.INSTANCE);
 
-		git = Git.open(basedir);
+		ensureGitIsOpen();
 		List<Ref> tags = git.tagList().call();
 		assertEquals(1, tags.size());
 		Ref ref = tags.get(0);
 		assertEquals("refs/tags/myTag", ref.getName());
-	}
-
-	@Test
-	public void testGetExistingIgnoredFiles() throws Exception {
-		migrator.init(basedir);
-		Files.writeLines(new File(basedir, ".gitignore"), Arrays.asList("/.jazz5", "/some.zip", "/someother.zip",
-				"/subdir/some.jar", "/subdir/subsub/some.dll", "/subdir/subsub/someother.dll"), cs, false);
-
-		new File(basedir, ".jazz5").mkdir();
-		create(new File(basedir, "some.zip"));
-		create(new File(basedir, "subdir/some.jar"));
-		create(new File(basedir, "subdir/subsub/some.dll"));
-
-		SortedSet<String> expected = new TreeSet<String>(
-				Arrays.asList("/some.zip", "/subdir/some.jar", "/subdir/subsub/some.dll"));
-
-		SortedSet<String> stillExistingFiles = migrator.getExistingIgnoredFiles();
-
-		assertEquals(expected, stillExistingFiles);
 	}
 
 	@Test
@@ -459,112 +785,5 @@ public class GitMigratorTest {
 	@Test
 	public void testGetMaxFileThresholdValue_lessOrEqulalMaxArraySize() {
 		assertEquals(Integer.MAX_VALUE, migrator.getMaxFileThresholdValue(Integer.MAX_VALUE, Long.MAX_VALUE));
-	}
-
-	//
-	// helper stuff
-	//
-
-	private void create(File file) throws Exception {
-		file.getParentFile().mkdirs();
-		file.createNewFile();
-	}
-
-	private void checkExactLines(File fileName, List<String> expected) throws Exception {
-		assertEquals(expected, Files.readLines(fileName, cs));
-	}
-
-	private void checkAllLines(File fileName, List<String> expected) throws Exception {
-		List<String> readLines = Files.readLines(fileName, cs);
-		assertEquals(expected.size(), readLines.size());
-		for (String line : expected) {
-			assertTrue(readLines.contains(line));
-		}
-	}
-
-	private void checkGit(String userName, String userEmail, String comment) throws Exception {
-		git = Git.open(basedir);
-		Status status = git.status().call();
-		assertTrue(status.isClean());
-		Iterator<RevCommit> log = git.log().call().iterator();
-		RevCommit revCommit = log.next();
-		assertEquals(userEmail, revCommit.getAuthorIdent().getEmailAddress());
-		assertEquals(userName, revCommit.getAuthorIdent().getName());
-		assertEquals(comment, revCommit.getFullMessage());
-	}
-
-	private enum TestChangeSet implements ChangeSet {
-		INSTANCE, NO_WORKITEM_INSTANCE {
-			@Override
-			public List<WorkItem> getWorkItems() {
-				return Collections.emptyList();
-			}
-		};
-
-		@Override
-		public String getComment() {
-			return "the checkin comment";
-		}
-
-		@Override
-		public String getCreatorName() {
-			return "Heiri Mueller";
-		}
-
-		@Override
-		public String getEmailAddress() {
-			return "heiri.mueller@irgendwo.ch";
-		}
-
-		@Override
-		public long getCreationDate() {
-			return 0;
-		}
-
-		@Override
-		public List<WorkItem> getWorkItems() {
-			List<WorkItem> items = new ArrayList<WorkItem>();
-			items.add(TestWorkItem.INSTANCE1);
-			return items;
-		}
-	}
-
-	private enum TestWorkItem implements WorkItem {
-		INSTANCE1 {
-			@Override
-			public long getNumber() {
-				return 4711;
-			}
-
-			@Override
-			public String getText() {
-				return "The one and only";
-			}
-		},
-		INSTANCE2 {
-			@Override
-			public long getNumber() {
-				return 4712;
-			}
-
-			@Override
-			public String getText() {
-				return "The even more and only";
-			}
-		};
-	}
-
-	private enum TestTag implements Tag {
-		INSTANCE;
-
-		@Override
-		public String getName() {
-			return "myTag";
-		}
-
-		@Override
-		public long getCreationDate() {
-			return 0;
-		}
 	}
 }

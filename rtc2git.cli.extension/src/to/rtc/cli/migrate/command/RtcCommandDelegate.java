@@ -10,9 +10,10 @@ import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.ClientConfiguration;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.CLIParser;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
-import com.ibm.team.rtc.cli.infrastructure.internal.parser.IOptionKey;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
+
+import to.rtc.cli.migrate.util.ExceptionHelper;
 
 public abstract class RtcCommandDelegate {
 
@@ -29,13 +30,28 @@ public abstract class RtcCommandDelegate {
 	}
 
 	public int run() throws CLIClientException {
-		long start = System.currentTimeMillis();
-		AbstractSubcommand command = getCommand();
+		final long start = System.currentTimeMillis();
+		final AbstractSubcommand command = getCommand();
+		String result = "";
+		output.writeLine("DelegateCommand [" + this + "] running...");
 		try {
-			return command.run(config);
+			final int returnCode = command.run(config);
+			result = ", returned " + returnCode;
+			return returnCode;
+		} catch( RuntimeException ex) {
+			result = ", threw " + ExceptionHelper.exceptionToString(ex);
+			throw ex;
+		} catch( CLIClientException ex ) {
+			result = ", threw " + ExceptionHelper.exceptionToString(ex);
+			throw ex;
+		} catch( Error ex) {
+			result = ", threw " + ExceptionHelper.exceptionToString(ex);
+			throw ex;
 		} finally {
+			final long finish = System.currentTimeMillis();
+			final long duration = finish - start;
 			output.writeLine(
-					"DelegateCommand [" + this + "] finished in [" + (System.currentTimeMillis() - start) + "]ms");
+					"DelegateCommand [" + this + "] finished in [" + duration + "]ms" + result);
 		}
 	}
 
@@ -52,19 +68,16 @@ public abstract class RtcCommandDelegate {
 		}
 	}
 
-	protected static String getSubCommandOption(IScmClientConfiguration config, IOptionKey key) {
-		return config.getSubcommandCommandLine().getOption(key);
-	}
-
 	protected void setSubCommandLine(IScmClientConfiguration config, ICommandLine commandLine) {
+		String fieldName = "subargs";
 		Class<?> c = ClientConfiguration.class;
 		Field subargs;
 		try {
-			subargs = c.getDeclaredField("subargs");
+			subargs = c.getDeclaredField(fieldName);
 			subargs.setAccessible(true);
 			subargs.set(config, commandLine);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Failed to set field '" + fieldName + "' to '" + commandLine + "' in instance " + config, e);
 		}
 	}
 
@@ -76,4 +89,18 @@ public abstract class RtcCommandDelegate {
 		return commandLine;
 	}
 
+	protected static String mkCommandLineString(String prefix, Iterable<String> args) {
+		final StringBuilder s = new StringBuilder(prefix);
+		for (final String arg : args) {
+			if (s.length() > 0) {
+				s.append(' ');
+			}
+			if (arg.contains(" ") || arg.isEmpty()) {
+				s.append('\'').append(arg).append('\'');
+			} else {
+				s.append(arg);
+			}
+		}
+		return s.toString();
+	}
 }

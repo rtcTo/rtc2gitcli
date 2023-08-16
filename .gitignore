@@ -8,6 +8,21 @@
 *.war
 *.ear
 
+# Build-time work files
+# Likely name of RTC scmTools
+/RTC-scmTools-*.zip
+# Where we unpack the tools into
+/rtcScmTools
+/rtcScmTools/
+# Intermediate files made when we build our docker image
+/.dockerignore
+/contents.tar
+/contents.txt
+/Dockerfile
+/extraArgs.txt
+/TrustedCertificates
+/TrustedCertificates/
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 

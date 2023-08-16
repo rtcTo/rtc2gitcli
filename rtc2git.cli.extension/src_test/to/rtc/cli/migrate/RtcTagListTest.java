@@ -12,8 +12,11 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.Before;
@@ -140,31 +143,55 @@ public class RtcTagListTest {
 
 	@Test
 	public void testPruneExcludedTags() {
-		tagList.add(new RtcTag("uuid").setOriginalName("includedTag").setCreationDate(Long.MAX_VALUE - 10000));
-		tagList.add(new RtcTag("uuid").setOriginalName("includedSecondTag").setCreationDate(Long.MAX_VALUE - 10000));
-		tagList.add(new RtcTag("uuid").setOriginalName("excludedTag").setCreationDate(Long.MAX_VALUE - 10000));
-		tagList.add(new RtcTag("uuid").setOriginalName("notIncludedTag").setCreationDate(Long.MAX_VALUE - 10000));
+		final RtcTag inputT1 = new RtcTag("t1uuid").setOriginalName("includedTag1").setCreationDate(Long.MAX_VALUE - 40000);
+		final RtcChangeSet t1cs = new RtcChangeSet("t1cs").setComponent("component");
+		inputT1.add(t1cs);
+		tagList.add(inputT1);
+		final RtcTag inputT2 = new RtcTag("t2uuid").setOriginalName("excludedTag2").setCreationDate(Long.MAX_VALUE - 30000);
+		final RtcChangeSet t2cs = new RtcChangeSet("t2cs").setComponent("component");
+		inputT2.add(t2cs);
+		tagList.add(inputT2);
+		final RtcTag inputT3 = new RtcTag("t3uuid").setOriginalName("includedSecondTag3").setCreationDate(Long.MAX_VALUE - 20000);
+		final RtcChangeSet t3cs1 = new RtcChangeSet("t3cs1").setComponent("component");
+		final RtcChangeSet t3cs2 = new RtcChangeSet("t3cs2").setComponent("component");
+		inputT3.add(t3cs1);
+		inputT3.add(t3cs2);
+		tagList.add(inputT3);
+		final RtcTag inputT4 = new RtcTag("t4uuid").setOriginalName("notIncludedTag4").setCreationDate(Long.MAX_VALUE - 10000);
+		final RtcChangeSet t4cs = new RtcChangeSet("t4cs").setComponent("component");
+		inputT4.add(t4cs);
+		tagList.add(inputT4);
 		tagList.getHeadTag();
+		final RtcTag expectedT1 = new RtcTag("t1uuid").setOriginalName("includedTag1").setCreationDate(Long.MAX_VALUE - 40000);
+		final RtcTag expectedT2 = new RtcTag("t2uuid").setOriginalName("excludedTag2").setCreationDate(Long.MAX_VALUE - 30000);
+		final RtcTag expectedT3 = new RtcTag("t3uuid").setOriginalName("includedSecondTag3").setCreationDate(Long.MAX_VALUE - 20000);
+		final RtcTag expectedT4 = new RtcTag("t4uuid").setOriginalName("notIncludedTag4").setCreationDate(Long.MAX_VALUE - 10000);
+		final RtcTag expectedHead = new RtcTag("ignored").setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE);
 
 		assertThat("All added tags are in the list", tagList.size(), equalTo(5));
 
 		tagList.pruneExcludedTags(Pattern.compile("^(included.*|HEAD)$"));
 
-		assertThat(
-				"Expect tag with name 'includedTag' is in the list",
-				tagList.contains(new RtcTag("uuid").setOriginalName("includedTag").setCreationDate(
-						Long.MAX_VALUE - 10000)), equalTo(true));
-		assertThat(
-				"Expect tag with name 'includedSecondTag' is in the list",
-				tagList.contains(new RtcTag("uuid").setOriginalName("includedSecondTag").setCreationDate(
-						Long.MAX_VALUE - 10000)), equalTo(true));
-		assertThat("Expect tag with name 'HEAD' is in the list",
-				tagList.contains(new RtcTag("uuid").setOriginalName("HEAD").setCreationDate(Long.MAX_VALUE)),
-				equalTo(true));
-		assertThat(
-				"Expect tag with name 'excludedTag' is not in the list",
-				tagList.contains(new RtcTag("uuid").setOriginalName("excludedTag").setCreationDate(
-						Long.MAX_VALUE - 10000)), equalTo(false));
+		testTagList(expectedT1, true, t1cs);
+		testTagList(expectedT3, true, t2cs, t3cs1, t3cs2);
+		testTagList(expectedHead, true, t4cs);
+		testTagList(expectedT2, false);
+		testTagList(expectedT4, false);
+	}
+
+	private void testTagList(RtcTag t, boolean isExpectedToBeInTheList, RtcChangeSet... expectedChangeSets) {
+		final String msg = "Expect tag with name '"+t.getOriginalName()+"' is "+(isExpectedToBeInTheList?"":"not ")+"in the list";
+		final Boolean actuallyIsInList = tagList.contains(t);
+		assertThat(msg, actuallyIsInList, equalTo(isExpectedToBeInTheList));
+		if( isExpectedToBeInTheList ) {
+			final RtcTag actualTagInList = tagList.getTag(t.getUuid(), t.getOriginalName(), t.getCreationDate());
+			final List<RtcChangeSet> expectedChangeSetsAsList = new ArrayList<RtcChangeSet>(Arrays.asList(expectedChangeSets));
+			final List<RtcChangeSet> actualChangeSetsAsList = new ArrayList<RtcChangeSet>();
+			for( List<RtcChangeSet> actualCss : actualTagInList.getComponentsChangeSets().values()) {
+				actualChangeSetsAsList.addAll(actualCss);
+			}
+			assertThat("Expecting tag with name '"+t.getOriginalName()+"' ChangeSets to contain", actualChangeSetsAsList, equalTo(expectedChangeSetsAsList));
+		}
 	}
 
 	@Test
@@ -193,4 +220,132 @@ public class RtcTagListTest {
 
 		assertThat("Only one tag is in the list", tagList.size(), equalTo(1));
 	}
+
+    @Test
+    public void testSortByCreationDateGivenTagsOfOneComponentThenSortsByChangesetOrder() {
+        final String component = "component";
+        final RtcTag inputT1 = new RtcTag("zt1uuid").setOriginalName("zt1").setCreationDate(1000);
+        final RtcChangeSet inputCS1 = new RtcChangeSet("zt1cs").setComponent(component).setHistoryOrderIndex(1L);
+        inputT1.add(inputCS1);
+        final RtcTag inputT2 = new RtcTag("xt2uuid").setOriginalName("x2").setCreationDate(12000);
+        final RtcChangeSet inputCS2 = new RtcChangeSet("xt2cs").setComponent(component).setHistoryOrderIndex(2L);
+        inputT2.add(inputCS2);
+        final RtcTag inputT3 = new RtcTag("y3uuid").setOriginalName("y3").setCreationDate(3000);
+        final RtcChangeSet inputCS3 = new RtcChangeSet("y3cs").setComponent(component).setHistoryOrderIndex(3L);
+        inputT3.add(inputCS3);
+        tagList.add(inputT1);
+        tagList.add(inputT3);
+        tagList.add(inputT2); // put them in out of order
+        final List<RtcTag> expected = toList(inputT1, inputT2, inputT3);
+
+        tagList.sortByCreationDate();
+        final List<RtcTag> actual = toList(tagList.iterator());
+
+        assertThat("Tags", actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSortByCreationDateGivenTagsWithNoComponentInCommonThenSortsByDateOrder() {
+        final String component1 = "component1";
+        final String component2 = "componentTwo";
+        final String component3 = "component3";
+        final RtcTag inputT1 = new RtcTag("zt1uuid").setOriginalName("zt1").setCreationDate(1000);
+        final RtcChangeSet inputCS1 = new RtcChangeSet("zt1cs").setComponent(component1).setHistoryOrderIndex(1L);
+        inputT1.add(inputCS1);
+        final RtcTag inputT2 = new RtcTag("xt2uuid").setOriginalName("x2").setCreationDate(2000);
+        final RtcChangeSet inputCS2 = new RtcChangeSet("xt2cs").setComponent(component2).setHistoryOrderIndex(3L);
+        inputT2.add(inputCS2);
+        final RtcTag inputT3 = new RtcTag("y3uuid").setOriginalName("y3").setCreationDate(3000);
+        final RtcChangeSet inputCS3 = new RtcChangeSet("y3cs").setComponent(component3).setHistoryOrderIndex(2L);
+        inputT3.add(inputCS3);
+        tagList.add(inputT1);
+        tagList.add(inputT3);
+        tagList.add(inputT2); // put them in out of order
+        final List<RtcTag> expected = toList(inputT1, inputT2, inputT3);
+
+        tagList.sortByCreationDate();
+        final List<RtcTag> actual = toList(tagList.iterator());
+
+        assertThat("Tags", actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSortByCreationDateGivenMixedScenarioThenSortsByChangesetAndDateOrder() {
+        final String component1 = "component1";
+        final String component2 = "component2";
+        // 6 tags
+        final RtcTag inputT1 = new RtcTag("uuid1").setOriginalName("1t").setCreationDate(200);
+        final RtcTag inputT2 = new RtcTag("uuid2").setOriginalName("t2").setCreationDate(600);
+        final RtcTag inputT3 = new RtcTag("u3uid").setOriginalName("t3").setCreationDate(200);
+        final RtcTag inputT4 = new RtcTag("uu4id").setOriginalName("t4").setCreationDate(500);
+        final RtcTag inputT5 = new RtcTag("5uuid").setOriginalName("t5").setCreationDate(400);
+        final RtcTag inputT6 = new RtcTag("uuid6").setOriginalName("6t").setCreationDate(900);
+        // tag1 has nothing
+        // tag2 has both components
+        inputT2.add(new RtcChangeSet("c1cs1").setComponent(component1).setHistoryOrderIndex(101L));
+        inputT2.add(new RtcChangeSet("c1cs2").setComponent(component1).setHistoryOrderIndex(102L));
+        inputT2.add(new RtcChangeSet("c2cs1").setComponent(component2).setHistoryOrderIndex(201L));
+        inputT2.add(new RtcChangeSet("c2cs2").setComponent(component2).setHistoryOrderIndex(202L));
+        // tag3 uses one
+        inputT3.add(new RtcChangeSet("c1cs3").setComponent(component1).setHistoryOrderIndex(103L));
+        inputT3.add(new RtcChangeSet("c1cs4").setComponent(component1).setHistoryOrderIndex(104L));
+        // tag4 uses both
+        inputT4.add(new RtcChangeSet("c1cs5").setComponent(component1).setHistoryOrderIndex(105L));
+        inputT4.add(new RtcChangeSet("c1cs6").setComponent(component1).setHistoryOrderIndex(106L));
+        inputT4.add(new RtcChangeSet("c2cs3").setComponent(component2).setHistoryOrderIndex(203L));
+        inputT4.add(new RtcChangeSet("c2cs4").setComponent(component2).setHistoryOrderIndex(204L));
+        // tag5 uses the other
+        inputT5.add(new RtcChangeSet("c2cs5").setComponent(component2).setHistoryOrderIndex(205L));
+        inputT5.add(new RtcChangeSet("c2cs6").setComponent(component2).setHistoryOrderIndex(206L));
+        // tag6 has nothing
+        final List<RtcTag> expected = toList(inputT1, inputT2, inputT3, inputT4, inputT5, inputT6);
+        // add in wrong order to prevent false-positive
+        tagList.add(inputT5);
+        tagList.add(inputT4);
+        tagList.add(inputT3);
+        tagList.add(inputT2);
+        tagList.add(inputT1);
+        tagList.add(inputT6);
+
+        tagList.sortByCreationDate();
+        final List<RtcTag> actual = toList(tagList.iterator());
+
+        assertThat("Tags", actual, equalTo(expected));
+    }
+
+    @Test
+    public void testSortByCreationDateGivenTagsWithInconsistentTagHistoryThenThrows() {
+        final String component = "component";
+        final RtcChangeSet inputCS1 = new RtcChangeSet("cs1").setComponent(component).setHistoryOrderIndex(1L);
+        final RtcChangeSet inputCS2 = new RtcChangeSet("cs2").setComponent(component).setHistoryOrderIndex(2L);
+        final RtcChangeSet inputCS3 = new RtcChangeSet("cs3").setComponent(component).setHistoryOrderIndex(3L);
+        final RtcTag inputT1 = new RtcTag("t1uuid").setOriginalName("t1").setCreationDate(1000);
+        final RtcTag inputT2 = new RtcTag("t2uuid").setOriginalName("t2").setCreationDate(12000);
+        inputT1.add(inputCS1);
+        inputT1.add(inputCS2);
+        inputT1.add(inputCS3);
+        inputT2.add(inputCS2);
+        tagList.add(inputT1);
+        tagList.add(inputT2);
+        thrown.expect(IllegalStateException.class);
+
+        tagList.sortByCreationDate();
+    }
+
+    private static final <T> List<T> toList(Iterator<? extends T> i) {
+        final List<T> result = new ArrayList<T>();
+        while (i.hasNext()) {
+            result.add(i.next());
+        }
+        return result;
+    }
+
+    @SafeVarargs
+    private static final <T> List<T> toList(T... elements) {
+        final List<T> result = new ArrayList<T>();
+        for (final T e : elements) {
+            result.add(e);
+        }
+        return result;
+    }
 }

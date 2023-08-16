@@ -23,14 +23,21 @@ public class MigrateToGitTest {
 
 	@Test
 	public void testTrimProperties() throws Exception {
+		// Given
 		List<String> lines = new ArrayList<String>();
 		lines.add("a.b.c =  d ");
 		lines.add("p2 =  my value ; ");
 		Properties untrimmed = prepareUntrimmedProperties(lines);
+		assertEquals(2, untrimmed.entrySet().size());
+
+		// When
 		Properties trimmed = MigrateToGit.trimProperties(untrimmed);
+
+		// Then
 		assertNotNull(trimmed);
-		assertEquals(2, trimmed.entrySet().size());
+		assertEquals(4, trimmed.entrySet().size());
 		assertEquals("d", trimmed.getProperty("a.b.c"));
+		assertEquals("d ", trimmed.getProperty("a.b.c.untrimmed"));
 		assertEquals("my value ;", trimmed.getProperty("p2"));
 	}
 

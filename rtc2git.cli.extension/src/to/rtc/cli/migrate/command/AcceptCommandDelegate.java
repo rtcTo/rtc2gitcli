@@ -1,5 +1,6 @@
 package to.rtc.cli.migrate.command;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,22 +10,23 @@ import com.ibm.team.filesystem.cli.client.internal.subcommands.AcceptCmd;
 import com.ibm.team.filesystem.cli.client.internal.subcommands.AcceptCmdOptions;
 import com.ibm.team.filesystem.cli.core.AbstractSubcommand;
 import com.ibm.team.filesystem.cli.core.Constants;
-import com.ibm.team.filesystem.cli.core.subcommands.CommonOptions;
 import com.ibm.team.filesystem.cli.core.subcommands.IScmClientConfiguration;
-import com.ibm.team.filesystem.client.FileSystemException;
 import com.ibm.team.filesystem.rcp.core.internal.changelog.IChangeLogOutput;
 import com.ibm.team.rtc.cli.infrastructure.internal.core.CLIClientException;
-import com.ibm.team.rtc.cli.infrastructure.internal.parser.ICommandLine;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.Options;
 import com.ibm.team.rtc.cli.infrastructure.internal.parser.exceptions.ConflictingOptionException;
 
-@SuppressWarnings("restriction")
+import to.rtc.cli.migrate.util.ExceptionHelper;
+
 public class AcceptCommandDelegate extends RtcCommandDelegate {
 
-	public AcceptCommandDelegate(IScmClientConfiguration config, IChangeLogOutput output, String targetWorkspace,
-			String changeSetUuid, boolean baseline, boolean acceptMissingChangesets) {
-		super(config, output, "accept " + targetWorkspace + " " + changeSetUuid + " baseline[" + baseline + "]");
-		setSubCommandLine(targetWorkspace, changeSetUuid, baseline, acceptMissingChangesets);
+	public AcceptCommandDelegate(IScmClientConfiguration config, IChangeLogOutput output, String uri, String username,
+			String password, String targetWorkspace, File sandboxDirOrNull, String changeSetUuid, boolean baseline,
+			boolean acceptMissingChangesets) {
+		super(config, output, mkCommandLineString("accept", mkCommandLineArgs("...", "...", "...", targetWorkspace,
+				sandboxDirOrNull, changeSetUuid, baseline, acceptMissingChangesets)));
+		setSubCommandLine(config, generateCommandLine(mkCommandLineArgs(uri, username, password, targetWorkspace,
+				sandboxDirOrNull, changeSetUuid, baseline, acceptMissingChangesets)));
 	}
 
 	@Override
@@ -67,7 +69,7 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 	}
 
 	void printExceptionMessage(String codeText, IStatus status) {
-		output.writeLine("There was a [" + codeText + "](" + status.getMessage()
+		output.writeLine("There was a [" + codeText + "](" + ExceptionHelper.istatusToString(status)
 				+ "). We ignore that, because the following accepts should fix that");
 	}
 
@@ -81,35 +83,20 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 		return new AcceptCmdOptions().getOptions();
 	}
 
-	void setSubCommandLine(String targetWorkspace, String changeSetUuid, boolean isBaseline,
-			boolean acceptMissingChangesets) {
-		String uri = getSubCommandOption(config, CommonOptions.OPT_URI);
-		String username = getSubCommandOption(config, CommonOptions.OPT_USERNAME);
-		String password;
-		if (config.getSubcommandCommandLine().hasOption(CommonOptions.OPT_PASSWORD)) {
-			password = getSubCommandOption(config, CommonOptions.OPT_PASSWORD);
-		} else {
-			try {
-				password = config.getConnectionInfo().getPassword();
-			} catch (FileSystemException e) {
-				throw new RuntimeException("Unable to get password", e);
-			}
-		}
-		setSubCommandLine(
-				config,
-				generateCommandLine(uri, username, password, targetWorkspace, changeSetUuid, isBaseline,
-						acceptMissingChangesets));
-	}
-
-	private ICommandLine generateCommandLine(String uri, String username, String password, String rtcWorkspace,
-			String changeSetUuid, boolean isBaseline, boolean acceptMissingChangesets) {
+	private static List<String> mkCommandLineArgs(String uri, String username, String password, String rtcWorkspace,
+			File sandboxDirOrNull, String changeSetUuid, boolean isBaseline, boolean acceptMissingChangesets) {
 		List<String> args = new ArrayList<String>();
 		args.add("-o");
+		args.add("-v");
+		if (sandboxDirOrNull!=null ) {
+			args.add("-d");
+			args.add(sandboxDirOrNull.getPath());
+		}
 		args.add("--no-merge");
 		if (acceptMissingChangesets) {
 			args.add("--accept-missing-changesets");
 		}
-		args.add("--no-local-refresh");
+		//args.add("--no-local-refresh");
 		args.add("-r");
 		args.add(uri);
 		args.add("-t");
@@ -118,13 +105,12 @@ public class AcceptCommandDelegate extends RtcCommandDelegate {
 		args.add(username);
 		args.add("-P");
 		args.add(password);
-
 		if (isBaseline) {
 			args.add("--baseline");
 		} else {
 			args.add("--changes");
 		}
 		args.add(changeSetUuid);
-		return generateCommandLine(args);
+		return args;
 	}
 }

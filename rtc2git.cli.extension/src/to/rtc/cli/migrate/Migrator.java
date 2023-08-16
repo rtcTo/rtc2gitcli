@@ -13,8 +13,10 @@ public interface Migrator {
 	 *
 	 * @param sandboxRootDirectory
 	 *            the sand box root directory
+	 * @param isUpdate
+	 *            if true, this migration is continuing on from a previous migration.
 	 */
-	void init(File sandboxRootDirectory);
+	void init(File sandboxRootDirectory, boolean isUpdate);
 
 	/**
 	 * Releases all resources

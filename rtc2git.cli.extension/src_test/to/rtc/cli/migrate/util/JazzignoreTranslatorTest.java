@@ -50,9 +50,14 @@ public class JazzignoreTranslatorTest {
 
 	private List<String> getExpectedGitignoreLines() {
 		List<String> lines = new ArrayList<String>();
+		lines.add("# Generated from .jazzignore file");
+		lines.add("#   ");
+		lines.add("#   core.ignore.recursive = {*.class} {*.so} \\{*.pyc}");
 		lines.add("*.class");
 		lines.add("*.so");
 		lines.add("*.pyc");
+		lines.add("#   ");
+		lines.add("#   core.ignore = {*.suo} {.classpath} \\{.idea} \\{.project} \\{.settings} \\{${buildDirectory\\}} \\{bin} \\{dist} \\{a?c} \\");
 		lines.add("/*.suo");
 		lines.add("/.classpath");
 		lines.add("/.idea");

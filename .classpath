@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="rtc2git.cli.extension/src_test"/>
+	<classpathentry kind="src" path="rtc2git.cli.extension/target/generated-test-sources/test-annotations"/>
+	<classpathentry kind="src" path="rtc2git.cli.extension/target/generated-sources/annotations"/>
+	<classpathentry kind="src" path="rtc2git.cli.extension/src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/gson-2.8.7.jar"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/hamcrest-core-1.3.jar"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/JavaEWAH-1.1.12.jar"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/junit-4.12.jar"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/org.eclipse.jgit-5.13.0.202109080827-r.jar"/>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/org.eclipse.jgit.lfs-5.13.0.202109080827-r.jar"/>
+	<classpathentry kind="lib" path="rtcScmTools/rtcScmTools.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/rtc2gitcli/rtc-javadocs.zip!/download.methodpark.de/stages/rtc-plugin/ibm-java-doc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="rtc2git.cli.extension/lib/slf4j-api-1.7.30.jar"/>
+	<classpathentry kind="output" path="rtc2git.cli.extension/target/eclipse"/>
+	<referencedentry kind="lib" path="rtcScmTools/jazz/scmtools/eclipse/plugins/com.ibm.team.scm.client_3.2.1000.v20180124_0354.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/rtc2gitcli/rtc-javadocs.zip!/download.methodpark.de/stages/rtc-plugin/ibm-java-doc"/>
+		</attributes>
+	</referencedentry>
+	<referencedentry kind="lib" path="rtcScmTools/jazz/scmtools/eclipse/plugins/com.ibm.team.repository.common_1.4.4000.v20180417_0035.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/rtc2gitcli/rtc-javadocs.zip!/download.methodpark.de/stages/rtc-plugin/ibm-java-doc"/>
+		</attributes>
+	</referencedentry>
+	<referencedentry kind="lib" path="rtcScmTools/jazz/scmtools/eclipse/plugins/com.ibm.team.scm.common_3.2.1100.v20180504_0035.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/rtc2gitcli/rtc-javadocs.zip!/download.methodpark.de/stages/rtc-plugin/ibm-java-doc"/>
+		</attributes>
+	</referencedentry>
+</classpath>

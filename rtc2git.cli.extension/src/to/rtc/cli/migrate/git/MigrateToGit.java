@@ -2,9 +2,13 @@ package to.rtc.cli.migrate.git;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Properties;
-import java.util.Set;
 import java.util.regex.Pattern;
+
+import javax.xml.bind.DatatypeConverter;
 
 import to.rtc.cli.migrate.MigrateTo;
 import to.rtc.cli.migrate.Migrator;
@@ -20,7 +24,9 @@ public class MigrateToGit extends MigrateTo {
 	public void run() throws FileSystemException {
 		Properties migrationProperties = readProperties(config.getSubcommandCommandLine());
 		baselineIncludeRegexPattern = Pattern.compile(migrationProperties.getProperty("rtc.baseline.include", ""));
-		migratorImplementation = new GitMigrator(migrationProperties);
+		Date initialCommitDate = getInitialCommitDate(config.getSubcommandCommandLine());
+		String gitCoreAutocrlf = getGitCoreAutocrlf(config.getSubcommandCommandLine());
+		migratorImplementation = new GitMigrator(this, migrationProperties, initialCommitDate, gitCoreAutocrlf);
 		try {
 			super.run();
 		} finally {
@@ -56,11 +62,42 @@ public class MigrateToGit extends MigrateTo {
 		return trimProperties(props);
 	}
 
+	private Date getInitialCommitDate(ICommandLine subargs) {
+		if ( !subargs.hasOption(MigrateToGitOptions.OPT_INITIAL_COMMIT_DATE)) {
+			return null;
+		}
+		String argValue = subargs.getOption(MigrateToGitOptions.OPT_INITIAL_COMMIT_DATE);
+		Calendar timestamp;
+		try {
+			timestamp = DatatypeConverter.parseDateTime(argValue);
+		} catch (IllegalArgumentException e) {
+			String msg = "Invalid argument " + MigrateToGitOptions.OPT_INITIAL_COMMIT_DATE.getName()
+					+ " argument value '" + argValue
+					+ "': This must be a parsable date-time, e.g. '2001-12-23T12:23:34Z'";
+			throw new IllegalArgumentException(msg, e);
+		}
+		return timestamp.getTime();
+	}
+
+	private String getGitCoreAutocrlf(ICommandLine subargs) {
+		if (!subargs.hasOption(MigrateToGitOptions.OPT_GIT_CORE_AUTOCRLF)) {
+			return null;
+		}
+		final String argValue = subargs.getOption(MigrateToGitOptions.OPT_GIT_CORE_AUTOCRLF);
+		if ("true".equals(argValue) || "false".equals(argValue) || "input".equals(argValue)) {
+			return argValue;
+		}
+		throw new IllegalArgumentException("Invalid argument " + MigrateToGitOptions.OPT_GIT_CORE_AUTOCRLF.getName()
+				+ " argument value '" + argValue + "': This must be 'true', 'false' or 'input'.");
+	}
+
 	protected static Properties trimProperties(Properties props) {
-		Set<Object> keyset = props.keySet();
+		Iterable<Object> keyset = new ArrayList<Object>(props.keySet());
 		for (Object keyObject : keyset) {
 			String key = (String) keyObject;
-			props.setProperty(key, props.getProperty(key).trim());
+			String value = props.getProperty(key);
+			props.setProperty(key, value.trim());
+			props.setProperty(key + ".untrimmed", value);
 		}
 		return props;
 	}
