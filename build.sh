@@ -141,7 +141,7 @@ cleanBuildRtc2GitCliPlugin() {
   mvn -B package -DskipTests=true
   mkdir -p target target/plugins target/pluginjar/lib
   makeFixedManifestFile META-INF/MANIFEST.MF target/pluginjar.MANIFEST.MF lib
-  ( cd lib && tar -cf - . --exclude='rtcScmTools.jar' ) | ( cd "target/pluginjar/lib" && tar -xf - )
+  ( cd lib && tar -cf - --exclude='rtcScmTools.jar' . ) | ( cd "target/pluginjar/lib" && tar -xf - )
   cp -p plugin.xml target/pluginjar/plugin.xml
   cp -p "target/${builtJarName}" "target/pluginjar/${buildJarNameInsidePlugin}"
   ( cd target/pluginjar && jar -cfm "../plugins/${pluginJarName}" ../pluginjar.MANIFEST.MF . )
