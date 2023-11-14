@@ -24,6 +24,31 @@ The intent behind this fork is to make it easier to create Jenkins builds to inc
 - Run ./build.sh with an argument telling it where to find the RTC scmTools (zip or folder).  That'll build a new CLI in ./rtcScmTools.
 - Run migrateFromRTCtoGit.sh with arguments telling it how to access git & rtc, where to read from and where to write to.
 
+== (scm) Usage
+- Obtain the **SCM tools** (as of this documentation, we are using [scmTools-Linux64-7.0.2SR1](https://jazz.net/downloads/workflow-management/releases/7.0.2SR1?p=allDownloads "scmTools-Linux64-7.0.2SR1")) and extract them to a directory
+- Extact the scmtools zip file to a location on your machine
+- Navigate to the **rtc2gitcli home directory** and run `./build.sh </path/to/scmTools_you_extracted_previously>`. That'll build a new rtc2git migration plugin underneath the new scmtools structure within the "rtc2gitcli" directory and place the new jar file, "to.rtc.cli.migrate_1.0.1.jar", under: <.../rtc2gitcli/rtcScmTools/jazz/scmtools/eclipse/plugins>
+- Create a directory on your system, this will become the directory in which you'll load your RTC workspace initially into this directory and the Git migration process will excute within, for example: /data/rtc2git/rtc_stream_acme_sandbox
+- You need to setup a **reference stream** and **2 repository workspaces** to trigger the changeset history for migration:
+    - You will need the reference RTC stream for this history you are trying to migrate, if this is already created you can reuse that, or you can cut a new stream from the existing stream if you desire as well, we'll call this **RTC_SOURCE_STREAM**
+    - A source repository workspace in RTC that is set to match the exact state/history of the stream stream above, that you are trying to migrate, we will call this **RTC_SOURCE_REPOSITORY_WORKSPACE**
+    - For the RTC_SOURCE_REPOSITORY_WORKSPACE, set the flow target to the RTC_SOURCE_STREAM stream.
+    - A target repository workspace in RTC that is set to the match the exact state/history of the stream stream above, but for each component in this workspace you will need to revert the history back to "1. Initial baseline" in each one to "empty" out the history and start from the beginning to get all history. We will call this **RTC_TARGET_REPOSITORY_WORKSPACE**.
+    - For the RTC_TARGET_REPOSITORY_WORKSPACE , set the flow target to the RTC_SOURCE_REPOSITORY_WORKSPACE workspace.
+        - **(PLEASE NOTE: You probably, at this point, want to create a snapshot of your RTC_TARGET_REPOSITORY_WORKSPACE workspace with all history reverted for each component to "1. Initial baseline" so you can easily revert it back in case the migration dies, for any reason, and you need to restart from scratch.)**
+- You should review and set your desired **migration properties**, if any, from the default ones in </path/to/rtc2gitcli/home/directory>/migration.properties, you will be using these later when you perform the migration process
+- Within the <.../rtc2gitcli/rtcScmTools/jazz/scmtools/eclipse> directory, navigate to the scm executable file and perform the following: 
+    - `./scm -clean`, when you run this it will then show the help usage afterwards, this is normal
+    - `./scm --help`, verify to see the new CLI command: "migrate-to-git - migrate to git" 
+    - `./scm login -r <rtc_url> --nickname RTC_2_GIT_CACHE_CREDENTIALS --cache --username <your_username>`
+- Then run `./scm load -r RTC_2_GIT_CACHE_CREDENTIALS --directory </path/to/local/rtc/sandbox/directory/created/earlier> --all --include-root --force --allow <target_rtc_repository_workspace_name>`
+- Run `./scm migrate-to-git -r RTC_2_GIT_CACHE_CREDENTIALS -d </path/to/local/rtc/sandbox/directory/created/earlier> --include-root --sourceStream <rtc_stream_name> --username <your_username> --migrationProperties </path/to/rtc2gitcli/home/directory>/migration.properties <source_rtc_repository_name> <target_rtc_repository_name>`
+    - This will pull in the changes from source RTC repository workspace to the local sandbox in which you've already loaded the empty target RTC repository workspace contents into and begin migration.
+- Finally, configure your Github/Bitbucket repository to prepare to push the code up, navigate to </path/to/local/rtc/sandbox/directory/created/earlier> and perform the following:
+    - Remove any origin setting: `git remote remove origin`
+    - Add the new remote origin to your server Git repo you'll be pushing this to (using BitBucket as an example): `git remote add origin https://git.server.com/bitbucket/scm/project/repo.git`
+    - Push all branch history: `git push -u origin --all`
+    - Push all tag history: `git push --tags`
 
 == (Old) Manual Usage
 - create an source RTC workspace with flow target and components as wanted -> `SOURCE_WORKSPACE`

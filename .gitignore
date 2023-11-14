@@ -14,6 +14,7 @@
 # Where we unpack the tools into
 /rtcScmTools
 /rtcScmTools/
+*/rtcScmTools
 # Intermediate files made when we build our docker image
 /.dockerignore
 /contents.tar
